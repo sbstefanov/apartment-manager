@@ -1,28 +1,15 @@
 import React, { useState } from 'react';
 import dayjs from 'dayjs';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faMagnifyingGlass, faArrowRight, faMoon, faUserGroup, faCalendarXmark } from '@fortawesome/free-solid-svg-icons';
 import BookingModal from './BookingModal';
-import { useLanguage } from '../context/LanguageContext';
-import { fmtEur } from '../context/LanguageContext';
+import { useLanguage, fmtEur } from '../context/LanguageContext';
 
 const FILTER_IDS = ['all', 'paid', 'pending', 'cancelled'];
 
-const STATUS_CLASS = {
-  paid:      'badge badge--paid',
-  pending:   'badge badge--pending',
-  cancelled: 'badge badge--cancelled',
-};
-const SOURCE_CLASS = {
-  'Директна':    'source-badge source-badge--direct',
-  'Airbnb':      'source-badge source-badge--airbnb',
-  'Booking.com': 'source-badge source-badge--booking',
-  'Друго':       'source-badge source-badge--other',
-};
-const AVATAR_CLASS = {
-  'Директна':    'booking-avatar booking-avatar--direct',
-  'Airbnb':      'booking-avatar booking-avatar--airbnb',
-  'Booking.com': 'booking-avatar booking-avatar--booking',
-  'Друго':       'booking-avatar booking-avatar--other',
-};
+const STATUS_CLASS = { paid: 'badge badge-paid', pending: 'badge badge-pending', cancelled: 'badge badge-cancelled' };
+const SOURCE_CHIP  = { 'Директна': 'chip chip-direct', 'Airbnb': 'chip chip-airbnb', 'Booking.com': 'chip chip-booking', 'Друго': 'chip chip-other' };
+const AVATAR_CLASS = { 'Директна': 'avatar avatar-direct', 'Airbnb': 'avatar avatar-airbnb', 'Booking.com': 'avatar avatar-booking', 'Друго': 'avatar avatar-other' };
 
 function initials(name) {
   const p = name.trim().split(' ');
@@ -41,13 +28,6 @@ function statusContext(b, t) {
   }
   return null;
 }
-
-const SearchIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-  </svg>
-);
 
 export default function BookingList({ bookings, onRefresh }) {
   const { t } = useLanguage();
@@ -68,104 +48,123 @@ export default function BookingList({ bookings, onRefresh }) {
     .filter(b => !search || b.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="booking-list">
-
-      {/* ── Search ── */}
-      <div className="search-bar">
-        <div className="search-wrap">
-          <span className="search-icon-wrap"><SearchIcon /></span>
+    <div className="space-y-4">
+      {/* Search */}
+      <div className="card p-3 md:p-4">
+        <div className="relative mb-3">
+          <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-app-3 text-sm" />
           <input
-            className="search-input"
             type="text"
             placeholder={t.searchPlaceholder}
             value={search}
             onChange={e => setSearch(e.target.value)}
+            className="input pl-10"
           />
         </div>
 
-        {/* ── Filters — 2×2 grid on mobile, row on desktop ── */}
-        <div className="filter-bar">
-          {FILTER_IDS.map(id => (
-            <button
-              key={id}
-              className={`filter-btn${filter === id ? ' filter-btn--active' : ''}`}
-              onClick={() => setFilter(id)}
-            >
-              {t.filters[id]}
-              <span className="filter-count">{counts[id]}</span>
-            </button>
-          ))}
+        {/* Filters — 4-up on desktop, 2x2 on mobile */}
+        <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2">
+          {FILTER_IDS.map(id => {
+            const isActive = filter === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setFilter(id)}
+                className={`flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold border transition-all ${
+                  isActive
+                    ? 'bg-primary-500 text-white border-primary-500'
+                    : 'surface-2 text-app-2 border-app hover:border-primary-500 hover:text-primary-500'
+                }`}
+              >
+                <span>{t.filters[id]}</span>
+                <span className={`text-[10px] font-bold min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center ${
+                  isActive ? 'bg-white/25 text-white' : 'bg-slate-200 dark:bg-slate-700 text-app-2'
+                }`}>
+                  {counts[id]}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
+      {/* Empty state */}
       {filtered.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">🔍</div>
-          <div className="empty-state-text">{t.noBookings}</div>
+        <div className="card p-12 text-center">
+          <FontAwesomeIcon icon={faCalendarXmark} className="text-4xl text-app-3 mb-3" />
+          <div className="text-sm text-app-2">{t.noBookings}</div>
         </div>
       ) : (
-        <>
-          <div className="booking-list-header">
+        <div className="card overflow-hidden">
+          {/* Desktop column headers */}
+          <div className="hidden md:grid grid-cols-[40px_1fr_120px_120px_140px] gap-3 px-4 py-3 border-b border-app surface-2 text-[11px] font-bold uppercase tracking-wider text-app-3">
             <span />
             <span>{t.colGuest}</span>
-            <span className="blh-source">{t.colPlatform}</span>
-            <span className="blh-amount">{t.colAmount}</span>
-            <span className="blh-status">{t.colStatus}</span>
+            <span>{t.colPlatform}</span>
+            <span>{t.colAmount}</span>
+            <span>{t.colStatus}</span>
           </div>
 
-          <div className="booking-rows">
+          <div className="divide-y divide-[var(--border)]">
             {filtered.map(b => {
               const ctx       = statusContext(b, t);
-              const avatarCls = AVATAR_CLASS[b.source] || 'booking-avatar booking-avatar--other';
-              const sourceCls = SOURCE_CLASS[b.source]  || 'source-badge source-badge--other';
-              const srcLabel  = t.sources[b.source]     || b.source;
+              const avatarCls = AVATAR_CLASS[b.source] || 'avatar avatar-other';
+              const sourceCls = SOURCE_CHIP[b.source]  || 'chip chip-other';
+              const srcLabel  = t.sources[b.source]    || b.source;
+              const stripe = b.status === 'paid' ? 'border-l-[3px] border-emerald-500' :
+                             b.status === 'pending' ? 'border-l-[3px] border-amber-500' :
+                             b.status === 'cancelled' ? 'border-l-[3px] border-rose-500 opacity-60' : '';
 
               return (
-                <div
+                <button
                   key={b.id}
-                  className={`booking-row booking-row--${b.status}`}
                   onClick={() => setSelected(b)}
+                  className={`w-full text-left grid md:grid-cols-[40px_1fr_120px_120px_140px] grid-cols-[40px_1fr] gap-3 px-3 md:px-4 py-3 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors ${stripe}`}
                 >
-                  <div className={avatarCls}>{initials(b.name)}</div>
+                  {/* Avatar */}
+                  <div className={`${avatarCls} w-10 h-10`}>{initials(b.name)}</div>
 
-                  <div className="booking-info">
-                    <div className="booking-name-row">
-                      <span className="booking-name">{b.name}</span>
-                    </div>
-                    <div className="booking-dates">
-                      <span className="booking-date-from">{dayjs(b.checkin).format('DD.MM.YY')}</span>
-                      <span className="booking-date-arrow">→</span>
-                      <span className="booking-date-to">{dayjs(b.checkout).format('DD.MM.YY')}</span>
-                      <span className="booking-nights">{t.nights(nights(b.checkin, b.checkout))}</span>
-                      <span className="booking-persons">{t.persons(b.persons)}</span>
+                  {/* Name + dates */}
+                  <div className="min-w-0">
+                    <div className="font-semibold text-sm text-app truncate">{b.name}</div>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1 text-xs text-app-3">
+                      <span className="font-semibold text-app-2">{dayjs(b.checkin).format('DD.MM.YY')}</span>
+                      <FontAwesomeIcon icon={faArrowRight} className="text-[9px]" />
+                      <span className="font-semibold text-app-2">{dayjs(b.checkout).format('DD.MM.YY')}</span>
+                      <span className="surface-2 px-1.5 py-px rounded text-[10px] flex items-center gap-1">
+                        <FontAwesomeIcon icon={faMoon} className="text-[8px]" />
+                        {t.nights(nights(b.checkin, b.checkout))}
+                      </span>
+                      <span className="surface-2 px-1.5 py-px rounded text-[10px] flex items-center gap-1">
+                        <FontAwesomeIcon icon={faUserGroup} className="text-[8px]" />
+                        {t.persons(b.persons)}
+                      </span>
                       {ctx && (
-                        <span className={ctx.type === 'active' ? 'active-badge active-badge--inline' : 'upcoming-badge upcoming-badge--inline'}>
+                        <span className={`text-[10px] font-semibold px-2 py-px rounded-full ${
+                          ctx.type === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+                                                : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                        }`}>
                           {ctx.label}
                         </span>
                       )}
                     </div>
 
-                    {/* Mobile card footer */}
-                    <div className="booking-card-footer">
+                    {/* Mobile-only inline source + amount */}
+                    <div className="md:hidden flex items-center justify-between mt-2">
                       <span className={sourceCls}>{srcLabel}</span>
-                      <span className="booking-amount">{fmtEur(b.amount)}</span>
+                      <span className="font-bold text-sm">{fmtEur(b.amount)}</span>
                     </div>
                   </div>
 
-                  <div className="booking-col booking-col--source">
-                    <span className={sourceCls}>{srcLabel}</span>
-                  </div>
-                  <div className="booking-col booking-col--amount">
-                    <span className="booking-amount">{fmtEur(b.amount)}</span>
-                  </div>
-                  <div className="booking-col booking-col--status">
-                    <span className={STATUS_CLASS[b.status]}>{t.status[b.status]}</span>
-                  </div>
-                </div>
+                  {/* Desktop columns */}
+                  <div className="hidden md:flex items-center"><span className={sourceCls}>{srcLabel}</span></div>
+                  <div className="hidden md:flex items-center font-bold text-sm">{fmtEur(b.amount)}</div>
+                  <div className="hidden md:flex items-center"><span className={STATUS_CLASS[b.status]}>{t.status[b.status]}</span></div>
+                </button>
               );
             })}
           </div>
-        </>
+        </div>
       )}
 
       {selected && (

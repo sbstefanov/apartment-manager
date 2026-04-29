@@ -1,16 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import dayjs from 'dayjs';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCalendarDays, faChevronLeft, faChevronRight, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { useLanguage } from '../context/LanguageContext';
-
-const CalSVG = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="4" width="18" height="18" rx="2"/>
-    <line x1="16" y1="2" x2="16" y2="6"/>
-    <line x1="8"  y1="2" x2="8"  y2="6"/>
-    <line x1="3"  y1="10" x2="21" y2="10"/>
-  </svg>
-);
 
 export default function DateRangePicker({ checkin, checkout, onChange, bookedRanges = [], errorCheckin, errorCheckout }) {
   const { t } = useLanguage();
@@ -36,18 +28,10 @@ export default function DateRangePicker({ checkin, checkout, onChange, bookedRan
     return () => document.removeEventListener('mousedown', h);
   }, [open]);
 
-  function isBooked(d) {
-    return bookedRanges.some(r => d >= r.checkin && d < r.checkout);
-  }
-  function isCheckoutDay(d) {
-    return bookedRanges.some(r => d === r.checkout);
-  }
-  function rangeOverlaps(s, e) {
-    return bookedRanges.some(r => s < r.checkout && e > r.checkin);
-  }
-  function previewEnd() {
-    return pickingEnd ? (hoverDate || checkout) : checkout;
-  }
+  function isBooked(d)        { return bookedRanges.some(r => d >= r.checkin && d < r.checkout); }
+  function isCheckoutDay(d)   { return bookedRanges.some(r => d === r.checkout); }
+  function rangeOverlaps(s,e) { return bookedRanges.some(r => s < r.checkout && e > r.checkin); }
+  function previewEnd()       { return pickingEnd ? (hoverDate || checkout) : checkout; }
   function isInRange(d) {
     const s = checkin, e = previewEnd();
     if (!s || !e) return false;
@@ -97,78 +81,100 @@ export default function DateRangePicker({ checkin, checkout, onChange, bookedRan
     });
   }
 
-  const displayText = () => {
-    if (checkin && checkout)
-      return `${dayjs(checkin).format('DD.MM.YYYY')} → ${dayjs(checkout).format('DD.MM.YYYY')}`;
-    if (checkin)
-      return `${dayjs(checkin).format('DD.MM.YYYY')} → ${t.drpPickEnd}`;
-    return null;
-  };
-  const text = displayText();
+  const text = checkin && checkout
+    ? `${dayjs(checkin).format('DD.MM.YYYY')} → ${dayjs(checkout).format('DD.MM.YYYY')}`
+    : checkin
+      ? `${dayjs(checkin).format('DD.MM.YYYY')} → ${t.drpPickEnd}`
+      : null;
+
   const hasError = errorCheckin || errorCheckout;
 
   const hint = () => {
     if (!checkin)  return t.drpHintStart;
     if (!checkout) return t.drpHintEnd;
-    const n = dayjs(checkout).diff(dayjs(checkin), 'day');
-    return t.drpNights(n);
+    return t.drpNights(dayjs(checkout).diff(dayjs(checkin), 'day'));
   };
 
+  function cellClasses(c) {
+    if (c.empty) return '';
+    let base = 'aspect-square flex items-center justify-center text-sm rounded-lg transition-all relative select-none';
+    if (c.past)        return `${base} text-app-3 opacity-40 cursor-default`;
+    if (c.isStart || c.isEnd) return `${base} bg-primary-500 text-white font-bold cursor-pointer ${c.isStart ? 'rounded-r-none' : ''} ${c.isEnd ? 'rounded-l-none' : ''} ${c.isStart && c.isEnd ? 'rounded-lg' : ''}`;
+    if (c.inRange)     return `${base} bg-primary-500/15 rounded-none cursor-pointer`;
+    if (c.isHoverEnd)  return `${base} bg-primary-500/20 border-2 border-dashed border-primary-500 cursor-pointer`;
+    if (c.conflict)    return `${base} bg-rose-200 text-rose-600 cursor-not-allowed`;
+    if (c.booked)      return `${base} booked-stripes text-rose-400 cursor-not-allowed`;
+    if (c.isCheckout)  return `${base} turnover-bg cursor-pointer hover:brightness-95 ${c.isToday ? 'font-bold text-primary-500' : ''}`;
+    if (c.isToday)     return `${base} font-bold text-primary-500 cursor-pointer hover:bg-primary-50`;
+    return `${base} text-app-2 cursor-pointer hover:bg-primary-50 hover:text-primary-500`;
+  }
+
   return (
-    <div className="drp-wrap" ref={wrapRef}>
+    <div className="relative" ref={wrapRef}>
+      {/* Trigger */}
       <div
-        className={`drp-trigger${open ? ' drp-trigger--open' : ''}${hasError ? ' drp-trigger--error' : ''}`}
         onClick={() => setOpen(o => !o)}
+        className={`flex items-center gap-2.5 px-3.5 py-3 rounded-xl border cursor-pointer transition-all ${
+          hasError ? 'border-rose-500' : open ? 'border-primary-500 ring-2 ring-primary-500/15' : 'border-app hover:border-primary-500'
+        }`}
+        style={{ background: 'var(--surface)' }}
       >
-        <span className="drp-trigger-icon"><CalSVG /></span>
-        <span className={`drp-trigger-value${!text ? ' drp-placeholder' : ''}`}>
+        <FontAwesomeIcon icon={faCalendarDays} className="text-app-3 text-sm" />
+        <span className={`flex-1 text-sm ${text ? 'text-app' : 'text-app-3'}`}>
           {text || t.drpPlaceholder}
         </span>
         {checkin && (
-          <button className="drp-clear"
-            onClick={e => { e.stopPropagation(); onChange('', ''); setHoverDate(null); }}>
-            ×
+          <button
+            onClick={e => { e.stopPropagation(); onChange('', ''); setHoverDate(null); }}
+            className="text-app-3 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 w-6 h-6 rounded flex items-center justify-center"
+            aria-label="Clear"
+          >
+            <FontAwesomeIcon icon={faXmark} />
           </button>
         )}
       </div>
       {hasError && (
-        <span className="form-error">{errorCheckin || errorCheckout}</span>
+        <span className="text-xs text-rose-500 mt-1.5 block">{errorCheckin || errorCheckout}</span>
       )}
 
+      {/* Popup */}
       {open && (
-        <div className="drp-popup">
-          <div className="drp-header">
-            <button className="drp-nav" onClick={() => setMonth(m => m.subtract(1, 'month'))}>‹</button>
-            <span className="drp-month-label">{t.months[month.month()]} {month.year()}</span>
-            <button className="drp-nav" onClick={() => setMonth(m => m.add(1, 'month'))}>›</button>
+        <div className="absolute top-full mt-2 left-0 md:left-0 right-0 md:right-auto md:w-[340px] z-50 card p-4 animate-pop-in">
+          {/* Month nav */}
+          <div className="flex items-center justify-between mb-2">
+            <button
+              onClick={() => setMonth(m => m.subtract(1, 'month'))}
+              className="w-8 h-8 rounded-lg border border-app hover:border-primary-500 hover:text-primary-500 flex items-center justify-center"
+            >
+              <FontAwesomeIcon icon={faChevronLeft} />
+            </button>
+            <span className="font-bold text-sm capitalize">{t.months[month.month()]} {month.year()}</span>
+            <button
+              onClick={() => setMonth(m => m.add(1, 'month'))}
+              className="w-8 h-8 rounded-lg border border-app hover:border-primary-500 hover:text-primary-500 flex items-center justify-center"
+            >
+              <FontAwesomeIcon icon={faChevronRight} />
+            </button>
           </div>
 
-          <div className="drp-hint">{hint()}</div>
+          {/* Hint */}
+          <div className="text-center text-xs font-semibold text-primary-500 mb-2 min-h-[18px]">{hint()}</div>
 
-          <div className="drp-dow-row">
-            {t.dow.map(d => <span key={d} className="drp-dow">{d}</span>)}
+          {/* Day-of-week */}
+          <div className="grid grid-cols-7 mb-1">
+            {t.dow.map(d => (
+              <span key={d} className="text-center text-[11px] font-bold text-app-3 py-1">{d}</span>
+            ))}
           </div>
 
-          <div className="drp-grid">
+          {/* Grid */}
+          <div className="grid grid-cols-7 gap-0.5">
             {cells.map(cell => {
-              if (cell.empty) return <span key={cell.key} className="drp-cell drp-cell--empty" />;
-
-              let cls = 'drp-cell';
-              if (cell.past)        cls += ' drp-cell--past';
-              else if (cell.booked) cls += ' drp-cell--booked';
-              else                  cls += ' drp-cell--free';
-              if (cell.isCheckout)  cls += ' drp-cell--turnover';
-              if (cell.isToday && !cell.past) cls += ' drp-cell--today';
-              if (cell.isStart)     cls += ' drp-cell--start';
-              if (cell.isEnd)       cls += ' drp-cell--end';
-              if (cell.inRange)     cls += ' drp-cell--range';
-              if (cell.conflict)    cls += ' drp-cell--conflict';
-              if (cell.isHoverEnd)  cls += ' drp-cell--hover-end';
-
+              if (cell.empty) return <span key={cell.key} className="aspect-square" />;
               return (
                 <span
                   key={cell.key}
-                  className={cls}
+                  className={cellClasses(cell)}
                   onClick={() => handleDay(cell.dateStr, cell.booked, cell.past)}
                   onMouseEnter={() => pickingEnd && setHoverDate(cell.dateStr)}
                   onMouseLeave={() => pickingEnd && setHoverDate(null)}
@@ -179,15 +185,16 @@ export default function DateRangePicker({ checkin, checkout, onChange, bookedRan
             })}
           </div>
 
-          <div className="drp-legend">
-            <span className="drp-legend-item">
-              <span className="drp-legend-swatch drp-legend-swatch--booked" />{t.drpBooked}
+          {/* Legend */}
+          <div className="flex justify-center flex-wrap gap-3 mt-3 pt-3 border-t border-app text-[11px] text-app-3">
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded booked-stripes border border-rose-300" />{t.drpBooked}
             </span>
-            <span className="drp-legend-item">
-              <span className="drp-legend-swatch drp-legend-swatch--turnover" />{t.drpTurnover}
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded turnover-bg border border-slate-300" />{t.drpTurnover}
             </span>
-            <span className="drp-legend-item">
-              <span className="drp-legend-swatch drp-legend-swatch--selected" />{t.drpSelected}
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded bg-primary-500" />{t.drpSelected}
             </span>
           </div>
         </div>

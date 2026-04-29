@@ -1,93 +1,53 @@
 import React, { useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faUser, faPhone, faEnvelope, faUserGroup, faCoins, faTag, faNoteSticky } from '@fortawesome/free-solid-svg-icons';
 import { saveBooking } from '../services/storage';
 import DateRangePicker from './DateRangePicker';
 import { useLanguage } from '../context/LanguageContext';
 
 const EMPTY = {
   name: '', phone: '', email: '', persons: 2,
-  checkin: '', checkout: '', amount: '',
+  checkin: '', checkout: '', amount: '', nightRate: '',
   status: 'pending', source: 'Директна', notes: '',
 };
 
-/* ── SVG field icons ── */
-const Icon = ({ path, children }) => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    {children}
-  </svg>
-);
-
-const PersonIcon = () => (
-  <Icon>
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
-  </Icon>
-);
-const PhoneIcon = () => (
-  <Icon>
-    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 12 19.79 19.79 0 0 1 1.08 3.39 2 2 0 0 1 3.05 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 16l.92.92z" />
-  </Icon>
-);
-const MailIcon = () => (
-  <Icon>
-    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-    <polyline points="22,6 12,13 2,6" />
-  </Icon>
-);
-const UsersIcon = () => (
-  <Icon>
-    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-  </Icon>
-);
-const CoinIcon = () => (
-  <Icon>
-    <circle cx="12" cy="12" r="10" />
-    <path d="M12 6v6l4 2" />
-  </Icon>
-);
-const TagIcon = () => (
-  <Icon>
-    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-    <line x1="7" y1="7" x2="7.01" y2="7" />
-  </Icon>
-);
-const NoteIcon = () => (
-  <Icon>
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-    <polyline points="14 2 14 8 20 8" />
-    <line x1="16" y1="13" x2="8" y2="13" />
-    <line x1="16" y1="17" x2="8" y2="17" />
-    <polyline points="10 9 9 9 8 9" />
-  </Icon>
-);
-
-/** Reusable field with optional icon wrapper */
-function Field({ label, error, icon, children, textarea }) {
+function Field({ label, error, icon, children, full }) {
   return (
-    <div className="form-group">
-      {label && <label className="form-label">{label}</label>}
-      {icon ? (
-        <div className={`input-icon-wrap${textarea ? ' input-icon-wrap--textarea' : ''}`}>
-          <span className="field-icon">{icon}</span>
-          {children}
-        </div>
-      ) : children}
-      {error && <span className="form-error">{error}</span>}
+    <div className={full ? 'col-span-2' : ''}>
+      {label && <label className="block text-xs font-semibold text-app-2 mb-1.5">{label}</label>}
+      <div className="relative">
+        {icon && (
+          <FontAwesomeIcon icon={icon} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-app-3 text-sm pointer-events-none" />
+        )}
+        {children}
+      </div>
+      {error && <span className="text-xs text-rose-500 mt-1 block">{error}</span>}
     </div>
   );
 }
 
-export default function BookingForm({ bookings, onRefresh, onNavigate }) {
+export default function BookingForm({ bookings, onRefresh, onNavigate, initial = null, onSave = null }) {
   const { t } = useLanguage();
-  const [form, setForm]       = useState(EMPTY);
-  const [errors, setErrors]   = useState({});
+  const [form, setForm]     = useState(initial || EMPTY);
+  const [errors, setErrors] = useState({});
+
+  const nightCount = form.checkin && form.checkout
+    ? Math.max(0, (new Date(form.checkout) - new Date(form.checkin)) / 86400000)
+    : 0;
 
   function set(field, value) {
-    setForm((f) => ({ ...f, [field]: value }));
-    setErrors((e) => ({ ...e, [field]: undefined }));
+    setForm(prev => {
+      const next = { ...prev, [field]: value };
+      const ni = field === 'checkin'   ? value : next.checkin;
+      const no = field === 'checkout'  ? value : next.checkout;
+      const nr = field === 'nightRate' ? value : next.nightRate;
+      if (nr && ni && no) {
+        const n = Math.max(0, (new Date(no) - new Date(ni)) / 86400000);
+        next.amount = n > 0 ? String(Math.round(n * Number(nr))) : next.amount;
+      }
+      return next;
+    });
+    setErrors(e => ({ ...e, [field]: undefined }));
   }
 
   function validate() {
@@ -95,97 +55,69 @@ export default function BookingForm({ bookings, onRefresh, onNavigate }) {
     if (!form.name.trim()) e.name = t.errRequired;
     if (!form.checkin)     e.checkin = t.errRequired;
     if (!form.checkout)    e.checkout = t.errRequired;
-    if (form.checkin && form.checkout && form.checkout <= form.checkin)
-      e.checkout = t.errCheckout;
+    if (form.checkin && form.checkout && form.checkout <= form.checkin) e.checkout = t.errCheckout;
     if (!form.amount || Number(form.amount) <= 0) e.amount = t.errAmount;
     return e;
   }
 
   function checkConflict() {
     if (!form.checkin || !form.checkout) return null;
-    return bookings.find(
-      (b) => b.status !== 'cancelled' && form.checkin < b.checkout && form.checkout > b.checkin
-    );
+    return bookings.find(b => b.status !== 'cancelled' && form.checkin < b.checkout && form.checkout > b.checkin);
   }
 
   function handleSubmit(e) {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
-
     const conflict = checkConflict();
     if (conflict) {
       alert(t.conflictMsg(conflict.name, conflict.checkin, conflict.checkout));
       return;
     }
-
+    // eslint-disable-next-line no-unused-vars
+    const { nightRate, ...formData } = form;
     saveBooking({
-      id: crypto.randomUUID(),
-      ...form,
-      persons: Number(form.persons),
-      amount:  Number(form.amount),
-      createdAt: new Date().toISOString(),
+      ...(initial ? { id: initial.id, createdAt: initial.createdAt } : { id: crypto.randomUUID(), createdAt: new Date().toISOString() }),
+      ...formData,
+      persons: Number(formData.persons),
+      amount:  Number(formData.amount),
     });
-
     onRefresh();
-    setForm(EMPTY);
-    setErrors({});
+    if (onSave) { onSave(); return; }
+    setForm(EMPTY); setErrors({});
     if (onNavigate) onNavigate('calendar');
   }
 
+  const inputCls = (err) => `input pl-10 ${err ? 'input-error' : ''}`;
+
   return (
-    <div className="booking-form-wrap">
-      <h2 className="form-title">{t.newBookingTitle}</h2>
+    <div className="card max-w-2xl mx-auto p-5 md:p-8">
+      <h2 className="text-xl font-bold mb-6 tracking-tight">{t.newBookingTitle}</h2>
 
-      <form onSubmit={handleSubmit} noValidate>
-        {/* ── Section 1: Guest ── */}
-        <div className="form-section">
-          <span className="form-section-label">{t.secGuest}</span>
-          <div className="form-row">
-            <Field label={t.fldName} error={errors.name} icon={<PersonIcon />}>
-              <input
-                className={`form-input${errors.name ? ' form-input--error' : ''}`}
-                type="text"
-                value={form.name}
-                onChange={(e) => set('name', e.target.value)}
-                placeholder={t.phName}
-              />
-            </Field>
-            <Field label={t.fldPersons} icon={<UsersIcon />}>
-              <input
-                className="form-input"
-                type="number"
-                min="1"
-                value={form.persons}
-                onChange={(e) => set('persons', e.target.value)}
-              />
-            </Field>
-          </div>
-          <div className="form-row">
-            <Field label={t.fldPhone} icon={<PhoneIcon />}>
-              <input
-                className="form-input"
-                type="tel"
-                value={form.phone}
-                onChange={(e) => set('phone', e.target.value)}
-                placeholder={t.phPhone}
-              />
-            </Field>
-            <Field label={t.fldEmail} icon={<MailIcon />}>
-              <input
-                className="form-input"
-                type="email"
-                value={form.email}
-                onChange={(e) => set('email', e.target.value)}
-                placeholder="example@mail.com"
-              />
-            </Field>
-          </div>
-        </div>
+      <form onSubmit={handleSubmit} noValidate className="space-y-7">
 
-        {/* ── Section 2: Stay ── */}
-        <div className="form-section">
-          <span className="form-section-label">{t.secStay}</span>
+        {/* Section 1: Guest */}
+        <Section label={t.secGuest}>
+          <Field label={t.fldName} error={errors.name} icon={faUser}>
+            <input className={inputCls(errors.name)} type="text" value={form.name}
+              onChange={e => set('name', e.target.value)} placeholder={t.phName} />
+          </Field>
+          <Field label={t.fldPersons} icon={faUserGroup}>
+            <input className="input pl-10" type="number" min="1" value={form.persons}
+              onChange={e => set('persons', e.target.value)} />
+          </Field>
+          <Field label={t.fldPhone} icon={faPhone}>
+            <input className="input pl-10" type="tel" value={form.phone}
+              onChange={e => set('phone', e.target.value)} placeholder={t.phPhone} />
+          </Field>
+          <Field label={t.fldEmail} icon={faEnvelope}>
+            <input className="input pl-10" type="email" value={form.email}
+              onChange={e => set('email', e.target.value)} placeholder="example@mail.com" />
+          </Field>
+        </Section>
+
+        {/* Section 2: Stay */}
+        <Section label={t.secStay} cols={1}>
           <DateRangePicker
             checkin={form.checkin}
             checkout={form.checkout}
@@ -198,58 +130,67 @@ export default function BookingForm({ bookings, onRefresh, onNavigate }) {
             errorCheckin={errors.checkin}
             errorCheckout={errors.checkout}
           />
-        </div>
+        </Section>
 
-        {/* ── Section 3: Payment ── */}
-        <div className="form-section">
-          <span className="form-section-label">{t.secPayment}</span>
-          <div className="form-row">
-            <Field label={t.fldAmount} error={errors.amount} icon={<CoinIcon />}>
-              <input
-                className={`form-input${errors.amount ? ' form-input--error' : ''}`}
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.amount}
-                onChange={(e) => set('amount', e.target.value)}
-                placeholder={t.phAmount}
-              />
-            </Field>
-            <Field label={t.fldStatus}>
-              <select className="form-input" value={form.status} onChange={(e) => set('status', e.target.value)}>
-                <option value="pending">{t.optPending}</option>
-                <option value="paid">{t.optPaid}</option>
-              </select>
-            </Field>
-          </div>
-          <Field label={t.fldPlatform} icon={<TagIcon />}>
-            <select className="form-input" value={form.source} onChange={(e) => set('source', e.target.value)}>
+        {/* Section 3: Payment */}
+        <Section label={t.secPayment}>
+          <Field label={t.fldNightRate} icon={faCoins}>
+            <input className="input pl-10" type="number" min="0" step="1" value={form.nightRate}
+              onChange={e => set('nightRate', e.target.value)} placeholder={t.phNightRate} />
+          </Field>
+          <Field label={t.fldAmount} error={errors.amount} icon={faCoins}>
+            <input className={inputCls(errors.amount)} type="number" min="0" step="0.01" value={form.amount}
+              onChange={e => set('amount', e.target.value)} placeholder={t.phAmount} />
+          </Field>
+          {nightCount > 0 && form.nightRate && Number(form.nightRate) > 0 && (
+            <div className="col-span-2 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-300 text-xs font-semibold py-2 px-3 rounded-lg">
+              {t.calcNights(nightCount, Number(form.nightRate), nightCount * Number(form.nightRate))}
+            </div>
+          )}
+          <Field label={t.fldStatus} full>
+            <select className="input" value={form.status} onChange={e => set('status', e.target.value)}>
+              <option value="pending">{t.optPending}</option>
+              <option value="paid">{t.optPaid}</option>
+            </select>
+          </Field>
+          <Field label={t.fldPlatform} icon={faTag} full>
+            <select className="input pl-10" value={form.source} onChange={e => set('source', e.target.value)}>
               <option value="Директна">{t.optDirect}</option>
               <option value="Airbnb">Airbnb</option>
               <option value="Booking.com">Booking.com</option>
               <option value="Друго">{t.optOther}</option>
             </select>
           </Field>
-        </div>
+        </Section>
 
-        {/* ── Section 4: Notes ── */}
-        <div className="form-section">
-          <span className="form-section-label">{t.secNotes}</span>
-          <Field icon={<NoteIcon />} textarea>
+        {/* Section 4: Notes */}
+        <Section label={t.secNotes} cols={1}>
+          <Field icon={faNoteSticky}>
             <textarea
-              className="form-input form-textarea"
+              className="input pl-10 resize-y min-h-[80px] py-2.5"
               value={form.notes}
-              onChange={(e) => set('notes', e.target.value)}
+              onChange={e => set('notes', e.target.value)}
               placeholder={t.phNotes}
               rows={3}
             />
           </Field>
-        </div>
+        </Section>
 
-        <button type="submit" className="btn btn--primary btn--full">
+        <button type="submit" className="btn-primary w-full py-3 text-base">
           {t.btnSave}
         </button>
       </form>
+    </div>
+  );
+}
+
+function Section({ label, cols = 2, children }) {
+  return (
+    <div>
+      <div className="text-[11px] font-bold uppercase tracking-wider text-app-3 mb-3">{label}</div>
+      <div className={`grid gap-3 ${cols === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
+        {children}
+      </div>
     </div>
   );
 }

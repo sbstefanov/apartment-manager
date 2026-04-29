@@ -1,13 +1,31 @@
-import React from 'react';
+import React, { useState } from 'react';
 import dayjs from 'dayjs';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSackDollar, faCircleCheck, faClock, faMoon, faChartColumn } from '@fortawesome/free-solid-svg-icons';
 import { useLanguage, fmtEur } from '../context/LanguageContext';
+
+const PLATFORMS = ['Директна', 'Airbnb', 'Booking.com', 'Друго'];
+const PLATFORM_BAR = {
+  'Директна':    'bg-direct',
+  'Airbnb':      'bg-airbnb',
+  'Booking.com': 'bg-booking',
+  'Друго':       'bg-slate-400',
+};
 
 export default function Revenue({ bookings }) {
   const { t } = useLanguage();
+  const currentYear = dayjs().year();
 
-  const active  = bookings.filter(b => b.status !== 'cancelled');
-  const paid    = bookings.filter(b => b.status === 'paid');
-  const pending = bookings.filter(b => b.status === 'pending');
+  const years = [...new Set(bookings.map(b => dayjs(b.checkin).year()))].sort((a, b) => b - a);
+  const [yearFilter, setYearFilter] = useState('all');
+
+  const filtered = yearFilter === 'all'
+    ? bookings
+    : bookings.filter(b => dayjs(b.checkin).year() === Number(yearFilter));
+
+  const active  = filtered.filter(b => b.status !== 'cancelled');
+  const paid    = filtered.filter(b => b.status === 'paid');
+  const pending = filtered.filter(b => b.status === 'pending');
 
   const totalRevenue = active.reduce((s, b) => s + b.amount, 0);
   const totalPaid    = paid.reduce((s, b) => s + b.amount, 0);
@@ -16,11 +34,12 @@ export default function Revenue({ bookings }) {
   const paidPct    = totalRevenue > 0 ? (totalPaid    / totalRevenue) * 100 : 0;
   const pendingPct = totalRevenue > 0 ? (totalPending / totalRevenue) * 100 : 0;
 
-  const currentYear = dayjs().year();
-  const nightsThisYear = active
+  const allActive = bookings.filter(b => b.status !== 'cancelled');
+  const nightsThisYear = allActive
     .filter(b => dayjs(b.checkin).year() === currentYear || dayjs(b.checkout).year() === currentYear)
     .reduce((s, b) => s + dayjs(b.checkout).diff(dayjs(b.checkin), 'day'), 0);
 
+  // Monthly breakdown
   const monthMap = {};
   active.forEach(b => {
     const key = dayjs(b.checkin).format('YYYY-MM');
@@ -28,103 +47,155 @@ export default function Revenue({ bookings }) {
     monthMap[key].total += b.amount;
     monthMap[key].count += 1;
   });
-
   const months = Object.entries(monthMap)
     .sort(([a], [b]) => (a < b ? 1 : -1))
     .map(([key, val]) => {
       const d = dayjs(key + '-01');
       return { label: `${t.months[d.month()]} ${d.year()}`, ...val };
     });
-
   const maxTotal = Math.max(...months.map(m => m.total), 1);
 
+  // Platform breakdown
+  const platformData = PLATFORMS.map(src => {
+    const bkgs = active.filter(b => b.source === src);
+    const total = bkgs.reduce((s, b) => s + b.amount, 0);
+    const pct   = totalRevenue > 0 ? Math.round((total / totalRevenue) * 100) : 0;
+    return { src, label: t.sources[src] || src, total, count: bkgs.length, pct, bar: PLATFORM_BAR[src] };
+  }).filter(p => p.count > 0).sort((a, b) => b.total - a.total);
+
   return (
-    <div className="revenue">
-      <div className="stat-cards">
-        <div className="stat-card stat-card--total">
-          <div className="stat-icon stat-icon--total">💰</div>
-          <div className="stat-label">{t.statTotal}</div>
-          <div className="stat-value">{fmtEur(totalRevenue)}</div>
-          <div className="stat-sub">{t.statActive(active.length)}</div>
+    <div className="space-y-5">
+      {/* Year filter */}
+      <div className="flex justify-end">
+        <select
+          value={yearFilter}
+          onChange={e => setYearFilter(e.target.value)}
+          className="input max-w-[160px] py-1.5 text-sm font-semibold"
+        >
+          <option value="all">{t.allYears}</option>
+          {years.map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
+      </div>
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <StatCard
+          icon={faSackDollar} bg="bg-primary-50 dark:bg-primary-900/30" iconColor="text-primary-500"
+          label={t.statTotal} value={fmtEur(totalRevenue)} sub={t.statActive(active.length)} />
+        <StatCard
+          icon={faCircleCheck} bg="bg-emerald-50 dark:bg-emerald-900/30" iconColor="text-emerald-500"
+          label={t.statPaid} value={fmtEur(totalPaid)} sub={t.statPaidCount(paid.length)} />
+        <StatCard
+          icon={faClock} bg="bg-amber-50 dark:bg-amber-900/30" iconColor="text-amber-500"
+          label={t.statPending} value={fmtEur(totalPending)} sub={t.statPaidCount(pending.length)} />
+      </div>
+
+      {/* Nights card */}
+      <div className="card p-4 md:p-5 flex items-center gap-4">
+        <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+          <FontAwesomeIcon icon={faMoon} className="text-blue-500 text-lg" />
         </div>
-        <div className="stat-card stat-card--green">
-          <div className="stat-icon stat-icon--green">✅</div>
-          <div className="stat-label">{t.statPaid}</div>
-          <div className="stat-value">{fmtEur(totalPaid)}</div>
-          <div className="stat-sub">{t.statPaidCount(paid.length)}</div>
-        </div>
-        <div className="stat-card stat-card--amber">
-          <div className="stat-icon stat-icon--amber">⏳</div>
-          <div className="stat-label">{t.statPending}</div>
-          <div className="stat-value">{fmtEur(totalPending)}</div>
-          <div className="stat-sub">{t.statPaidCount(pending.length)}</div>
+        <div className="flex-1">
+          <div className="text-xs font-semibold text-app-3 uppercase tracking-wider">{t.statNights(currentYear)}</div>
+          <div className="text-xl font-bold mt-0.5">{nightsThisYear} {t.statNightsUnit}</div>
+          <div className="text-xs text-app-3 mt-0.5">{t.statNightsFrom}</div>
         </div>
       </div>
 
-      <div className="stat-card stat-card--nights">
-        <div className="stat-icon stat-icon--blue">🌙</div>
-        <div className="stat-label">{t.statNights(currentYear)}</div>
-        <div className="stat-value">{nightsThisYear} {t.statNightsUnit}</div>
-        <div className="stat-sub">{t.statNightsFrom}</div>
-      </div>
-
+      {/* Progress bar */}
       {totalRevenue > 0 && (
-        <div className="revenue-progress" style={{ marginBottom: '24px' }}>
-          <div className="revenue-progress-label">
-            <span>{t.collected}</span>
-            <span style={{ fontWeight: 600, color: 'var(--text)' }}>{t.pctPaid(paidPct)}</span>
+        <div className="card p-4 md:p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-semibold text-app-2">{t.collected}</span>
+            <span className="text-sm font-bold">{t.pctPaid(paidPct)}</span>
           </div>
-          <div className="revenue-progress-bar">
-            <div className="revenue-progress-paid"    style={{ width: `${paidPct}%` }} />
-            <div className="revenue-progress-pending" style={{ width: `${pendingPct}%` }} />
+          <div className="h-2.5 surface-2 rounded-full overflow-hidden flex">
+            <div className="bg-primary-500 transition-all duration-500" style={{ width: `${paidPct}%` }} />
+            <div className="bg-amber-500 transition-all duration-500" style={{ width: `${pendingPct}%` }} />
           </div>
-          <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
-            <span style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 5, color: 'var(--text-3)' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--primary)', display: 'inline-block' }} />
-              {t.statPaid}
-            </span>
-            <span style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 5, color: 'var(--text-3)' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--amber)', display: 'inline-block' }} />
-              {t.statPending}
-            </span>
+          <div className="flex gap-4 mt-3 text-xs text-app-3">
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-primary-500" />{t.statPaid}</span>
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-500" />{t.statPending}</span>
           </div>
         </div>
       )}
 
-      <h3 className="section-title">{t.byMonth}</h3>
-
-      {months.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">📊</div>
-          <div className="empty-state-text">{t.noRevData}</div>
-        </div>
-      ) : (
-        <table className="revenue-table">
-          <thead>
-            <tr>
-              <th>{t.colMonth}</th>
-              <th>{t.colRes}</th>
-              <th>{t.colRevenue}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {months.map(m => (
-              <tr key={m.label}>
-                <td>{m.label}</td>
-                <td>{m.count}</td>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div className="month-bar-wrap">
-                      <div className="month-bar" style={{ width: `${(m.total / maxTotal) * 100}%` }} />
-                    </div>
-                    <span className="revenue-amount" style={{ whiteSpace: 'nowrap' }}>{fmtEur(m.total)}</span>
-                  </div>
-                </td>
-              </tr>
+      {/* Platform breakdown */}
+      {platformData.length > 0 && (
+        <section>
+          <h3 className="text-base font-bold mb-3">{t.byPlatform}</h3>
+          <div className="space-y-2">
+            {platformData.map(p => (
+              <div key={p.src} className="card p-3.5 md:p-4">
+                <div className="flex justify-between items-baseline mb-2">
+                  <span className="text-sm font-semibold">{p.label}</span>
+                  <span className="text-base font-bold">{fmtEur(p.total)}</span>
+                </div>
+                <div className="h-2 surface-2 rounded-full overflow-hidden mb-1.5">
+                  <div className={`h-full rounded-full transition-all duration-500 ${p.bar}`} style={{ width: `${p.pct}%` }} />
+                </div>
+                <div className="flex justify-between text-[11px] text-app-3">
+                  <span>{p.count} {t.colRes.toLowerCase()}</span>
+                  <span>{p.pct}% {t.ofTotal}</span>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        </section>
       )}
+
+      {/* Monthly breakdown */}
+      <section>
+        <h3 className="text-base font-bold mb-3">{t.byMonth}</h3>
+        {months.length === 0 ? (
+          <div className="card p-12 text-center">
+            <FontAwesomeIcon icon={faChartColumn} className="text-3xl text-app-3 mb-2" />
+            <div className="text-sm text-app-2">{t.noRevData}</div>
+          </div>
+        ) : (
+          <div className="card overflow-hidden">
+            <table className="w-full">
+              <thead className="surface-2">
+                <tr>
+                  <th className="text-left text-[11px] font-bold uppercase tracking-wider text-app-3 py-2.5 px-4">{t.colMonth}</th>
+                  <th className="text-left text-[11px] font-bold uppercase tracking-wider text-app-3 py-2.5 px-4 w-16">{t.colRes}</th>
+                  <th className="text-left text-[11px] font-bold uppercase tracking-wider text-app-3 py-2.5 px-4">{t.colRevenue}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {months.map(m => (
+                  <tr key={m.label} className="hover:surface-2 transition-colors">
+                    <td className="py-3 px-4 text-sm font-medium capitalize">{m.label}</td>
+                    <td className="py-3 px-4 text-sm">{m.count}</td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 h-2 surface-2 rounded-full overflow-hidden max-w-[200px]">
+                          <div className="h-full bg-gradient-to-r from-primary-500 to-primary-700 rounded-full transition-all duration-500"
+                            style={{ width: `${(m.total / maxTotal) * 100}%` }} />
+                        </div>
+                        <span className="text-sm font-bold whitespace-nowrap">{fmtEur(m.total)}</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function StatCard({ icon, bg, iconColor, label, value, sub }) {
+  return (
+    <div className="card p-4 md:p-5">
+      <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center mb-3`}>
+        <FontAwesomeIcon icon={icon} className={`${iconColor} text-base`} />
+      </div>
+      <div className="text-xs font-semibold text-app-3 uppercase tracking-wider">{label}</div>
+      <div className="text-xl md:text-2xl font-bold mt-1 tracking-tight">{value}</div>
+      <div className="text-xs text-app-3 mt-1">{sub}</div>
     </div>
   );
 }
