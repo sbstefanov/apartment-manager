@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faPenToSquare, faCheck, faBan, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faPenToSquare, faCheck, faBan, faTrash, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { saveBooking, deleteBooking, getBookings } from '../services/storage';
 import { useLanguage, fmtEur } from '../context/LanguageContext';
 import BookingForm from './BookingForm';
@@ -10,31 +10,71 @@ function nights(checkin, checkout) {
   return dayjs(checkout).diff(dayjs(checkin), 'day');
 }
 
-const STATUS_CLASS = { paid: 'badge badge-paid', pending: 'badge badge-pending', cancelled: 'badge badge-cancelled' };
+const STATUS_CLASS = {
+  paid:      'badge badge-paid',
+  pending:   'badge badge-pending',
+  cancelled: 'badge badge-cancelled',
+};
 
-export default function BookingModal({ booking, onClose, onRefresh }) {
+/* ─── Confirm banner shared by both mobile actions & desktop (if ever needed) ── */
+function ConfirmBanner({ action, bookingName, t, onConfirm, onDismiss }) {
+  const meta = {
+    paid:   { msg: t.confirmPaidMsg,   cls: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800', iconCls: 'text-emerald-500', btnCls: 'bg-emerald-500 hover:bg-emerald-600' },
+    cancel: { msg: t.confirmCancelMsg, cls: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800',         iconCls: 'text-amber-500',   btnCls: 'bg-amber-500 hover:bg-amber-600' },
+    delete: { msg: t.confirmDel(bookingName), cls: 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800',     iconCls: 'text-rose-500',    btnCls: 'bg-rose-500 hover:bg-rose-600' },
+  }[action];
+
+  return (
+    <div className={`rounded-xl p-3 flex items-start gap-3 border animate-fade-in ${meta.cls}`}>
+      <FontAwesomeIcon icon={faTriangleExclamation} className={`mt-0.5 text-sm flex-shrink-0 ${meta.iconCls}`} />
+      <span className="text-sm font-medium text-app flex-1 leading-snug">{meta.msg}</span>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <button
+          onClick={onConfirm}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-colors ${meta.btnCls}`}
+        >
+          {t.btnConfirm}
+        </button>
+        <button
+          onClick={onDismiss}
+          className="w-8 h-8 rounded-lg surface border border-app flex items-center justify-center text-app-3 hover:text-app"
+        >
+          <FontAwesomeIcon icon={faXmark} className="text-xs" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function BookingModal({ booking, onClose, onRefresh, initialEditing = false }) {
   const { t } = useLanguage();
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing]           = useState(initialEditing);
+  const [confirmAction, setConfirmAction] = useState(null); // 'paid' | 'cancel' | 'delete'
 
-  // Lock body scroll when open
+  // Lock body scroll
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
 
+  // Reset confirm when booking changes
+  useEffect(() => { setConfirmAction(null); }, [booking?.id]);
+
   if (!booking) return null;
 
-  function handleMarkPaid() { saveBooking({ ...booking, status: 'paid' }); onRefresh(); onClose(); }
-  function handleCancel()   { saveBooking({ ...booking, status: 'cancelled' }); onRefresh(); onClose(); }
-  function handleDelete() {
-    if (window.confirm(t.confirmDel(booking.name))) {
-      deleteBooking(booking.id); onRefresh(); onClose();
-    }
+  function executeConfirm() {
+    if (confirmAction === 'paid')   { saveBooking({ ...booking, status: 'paid' });      onRefresh(); onClose(); }
+    if (confirmAction === 'cancel') { saveBooking({ ...booking, status: 'cancelled' }); onRefresh(); onClose(); }
+    if (confirmAction === 'delete') { deleteBooking(booking.id);                        onRefresh(); onClose(); }
   }
+
   function handleSaved() { onRefresh(); onClose(); }
   function handleOverlay(e) { if (e.target === e.currentTarget) onClose(); }
 
   const n = nights(booking.checkin, booking.checkout);
+  const isPending   = booking.status === 'pending';
+  const isActive    = booking.status === 'paid' || booking.status === 'pending';
+  const isCancelled = booking.status === 'cancelled';
 
   return (
     <div
@@ -44,6 +84,7 @@ export default function BookingModal({ booking, onClose, onRefresh }) {
       <div className={`surface w-full ${editing ? 'max-w-2xl' : 'max-w-lg'} rounded-t-3xl md:rounded-3xl shadow-pop overflow-hidden md:animate-slide-up animate-sheet-in max-h-[90vh] flex flex-col`}>
 
         {editing ? (
+          /* ── Edit mode ─────────────────────────────────────────── */
           <>
             <ModalHeader name={t.editTitle} initial={booking.name.charAt(0)} onClose={() => setEditing(false)} />
             <div className="overflow-y-auto">
@@ -56,9 +97,11 @@ export default function BookingModal({ booking, onClose, onRefresh }) {
             </div>
           </>
         ) : (
+          /* ── View mode ─────────────────────────────────────────── */
           <>
             <ModalHeader name={booking.name} initial={booking.name.charAt(0)} status={booking.status} onClose={onClose} />
 
+            {/* Details */}
             <div className="overflow-y-auto p-5 md:p-6">
               <div className="grid grid-cols-2 gap-x-4 gap-y-4">
                 <Row label={t.lblPhone}    value={booking.phone || '—'} />
@@ -70,7 +113,6 @@ export default function BookingModal({ booking, onClose, onRefresh }) {
                 <Row label={t.lblAmount}   value={fmtEur(booking.amount)} highlight />
                 <Row label={t.lblSource}   value={t.sources[booking.source] || booking.source} />
               </div>
-
               {booking.notes && (
                 <div className="mt-5 pt-5 border-t border-app">
                   <div className="text-[11px] font-bold uppercase tracking-wider text-app-3 mb-1.5">{t.lblNotes}</div>
@@ -79,28 +121,60 @@ export default function BookingModal({ booking, onClose, onRefresh }) {
               )}
             </div>
 
-            <div className="border-t border-app p-3 md:p-4 flex flex-wrap gap-2 surface-2">
-              <button className="btn-secondary" onClick={() => setEditing(true)}>
-                <FontAwesomeIcon icon={faPenToSquare} />
-                {t.btnEdit}
-              </button>
-              {booking.status === 'pending' && (
-                <button className="btn-primary" onClick={handleMarkPaid}>
-                  <FontAwesomeIcon icon={faCheck} />
-                  {t.btnMarkPaid}
-                </button>
+            {/* Footer */}
+            <div className="border-t border-app p-3 md:p-4 surface-2 space-y-2.5">
+
+              {/* Confirm banner — shown for any triggered action */}
+              {confirmAction && (
+                <ConfirmBanner
+                  action={confirmAction}
+                  bookingName={booking.name}
+                  t={t}
+                  onConfirm={executeConfirm}
+                  onDismiss={() => setConfirmAction(null)}
+                />
               )}
-              {(booking.status === 'paid' || booking.status === 'pending') && (
-                <button className="btn-warning" onClick={handleCancel}>
-                  <FontAwesomeIcon icon={faBan} />
-                  {t.btnCancelBkg}
-                </button>
+
+              {/* ── Action buttons: mobile/tablet only (md:hidden) ── */}
+              {!confirmAction && (
+                <div className="md:hidden grid grid-cols-2 gap-2">
+                  {/* Edit — always, full width */}
+                  <button className="btn-secondary col-span-2" onClick={() => setEditing(true)}>
+                    <FontAwesomeIcon icon={faPenToSquare} />
+                    {t.btnEdit}
+                  </button>
+
+                  {/* Mark Paid — pending only */}
+                  {isPending && (
+                    <button className="btn-primary" onClick={() => setConfirmAction('paid')}>
+                      <FontAwesomeIcon icon={faCheck} />
+                      {t.btnMarkPaid}
+                    </button>
+                  )}
+
+                  {/* Cancel — paid or pending */}
+                  {isActive && (
+                    <button className="btn-warning" onClick={() => setConfirmAction('cancel')}>
+                      <FontAwesomeIcon icon={faBan} />
+                      {t.btnCancelBkg}
+                    </button>
+                  )}
+
+                  {/* Delete — always; full width when cancelled (no siblings) */}
+                  <button
+                    className={`btn-danger ${isCancelled ? 'col-span-2' : ''}`}
+                    onClick={() => setConfirmAction('delete')}
+                  >
+                    <FontAwesomeIcon icon={faTrash} />
+                    {t.btnDelete}
+                  </button>
+                </div>
               )}
-              <button className="btn-danger" onClick={handleDelete}>
-                <FontAwesomeIcon icon={faTrash} />
-                {t.btnDelete}
-              </button>
-              <button className="btn-ghost ml-auto" onClick={onClose}>{t.btnClose}</button>
+
+              {/* Close — always visible */}
+              <div className="flex justify-end">
+                <button className="btn-ghost" onClick={onClose}>{t.btnClose}</button>
+              </div>
             </div>
           </>
         )}
@@ -118,7 +192,10 @@ function ModalHeader({ name, initial, status, onClose }) {
         <h2 className="font-bold text-base text-app truncate">{name}</h2>
         {status && <span className={`mt-1 ${STATUS_CLASS[status]}`}>{t.statusLong[status]}</span>}
       </div>
-      <button onClick={onClose} className="w-8 h-8 rounded-lg hover:surface-2 flex items-center justify-center text-app-3 hover:text-app">
+      <button
+        onClick={onClose}
+        className="w-8 h-8 rounded-lg hover:surface-2 flex items-center justify-center text-app-3 hover:text-app"
+      >
         <FontAwesomeIcon icon={faXmark} />
       </button>
     </div>
@@ -129,7 +206,9 @@ function Row({ label, value, highlight }) {
   return (
     <div>
       <div className="text-[11px] font-bold uppercase tracking-wider text-app-3 mb-1">{label}</div>
-      <div className={`text-sm break-words ${highlight ? 'font-bold text-base text-primary-500' : 'text-app'}`}>{value}</div>
+      <div className={`text-sm break-words ${highlight ? 'font-bold text-base text-primary-500' : 'text-app'}`}>
+        {value}
+      </div>
     </div>
   );
 }

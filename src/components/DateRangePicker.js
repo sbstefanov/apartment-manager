@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCalendarDays, faChevronLeft, faChevronRight, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { useLanguage } from '../context/LanguageContext';
 
-export default function DateRangePicker({ checkin, checkout, onChange, bookedRanges = [], errorCheckin, errorCheckout }) {
+export default function DateRangePicker({ checkin, checkout, onChange, bookedRanges = [], errorCheckin, errorCheckout, allowPast = false, placeholder }) {
   const { t } = useLanguage();
   const today = dayjs().format('YYYY-MM-DD');
 
@@ -45,7 +45,7 @@ export default function DateRangePicker({ checkin, checkout, onChange, bookedRan
   }
 
   function handleDay(dateStr, booked, past) {
-    if (past) return;
+    if (past && !allowPast) return;
     if (!checkin || (checkin && checkout)) {
       onChange(booked ? '' : dateStr, '');
       if (!booked) return;
@@ -98,7 +98,7 @@ export default function DateRangePicker({ checkin, checkout, onChange, bookedRan
   function cellClasses(c) {
     if (c.empty) return '';
     let base = 'aspect-square flex items-center justify-center text-sm rounded-lg transition-all relative select-none';
-    if (c.past)        return `${base} text-app-3 opacity-40 cursor-default`;
+    if (c.past && !allowPast) return `${base} text-app-3 opacity-40 cursor-default`;
     if (c.isStart || c.isEnd) return `${base} bg-primary-500 text-white font-bold cursor-pointer ${c.isStart ? 'rounded-r-none' : ''} ${c.isEnd ? 'rounded-l-none' : ''} ${c.isStart && c.isEnd ? 'rounded-lg' : ''}`;
     if (c.inRange)     return `${base} bg-primary-500/15 rounded-none cursor-pointer`;
     if (c.isHoverEnd)  return `${base} bg-primary-500/20 border-2 border-dashed border-primary-500 cursor-pointer`;
@@ -120,8 +120,8 @@ export default function DateRangePicker({ checkin, checkout, onChange, bookedRan
         style={{ background: 'var(--surface)' }}
       >
         <FontAwesomeIcon icon={faCalendarDays} className="text-app-3 text-sm" />
-        <span className={`flex-1 text-sm ${text ? 'text-app' : 'text-app-3'}`}>
-          {text || t.drpPlaceholder}
+        <span className={`flex-1 text-sm ${text ? 'text-app font-semibold' : 'text-app-3'}`}>
+          {text || placeholder || t.drpPlaceholder}
         </span>
         {checkin && (
           <button

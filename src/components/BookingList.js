@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
 import dayjs from 'dayjs';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMagnifyingGlass, faArrowRight, faMoon, faUserGroup, faCalendarXmark } from '@fortawesome/free-solid-svg-icons';
+import {
+  faMagnifyingGlass, faArrowRight, faMoon, faUserGroup, faCalendarXmark,
+  faPenToSquare, faCheck, faBan, faTrash, faXmark,
+} from '@fortawesome/free-solid-svg-icons';
 import BookingModal from './BookingModal';
+import DateRangePicker from './DateRangePicker';
+import { saveBooking, deleteBooking } from '../services/storage';
 import { useLanguage, fmtEur } from '../context/LanguageContext';
 
 const FILTER_IDS = ['all', 'paid', 'pending', 'cancelled'];
@@ -29,11 +34,66 @@ function statusContext(b, t) {
   return null;
 }
 
+/* ─── Action button: colored icon + left-side tooltip on hover ── */
+function ActionBtn({ icon, title, colorCls, onClick }) {
+  return (
+    <div className="relative group/btn flex-shrink-0">
+      <button
+        onClick={onClick}
+        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150 border border-transparent ${colorCls}`}
+      >
+        <FontAwesomeIcon icon={icon} className="text-sm" />
+      </button>
+      {/* Tooltip — appears to the LEFT (stays inside the card bounds) */}
+      <div className="pointer-events-none absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2 px-2.5 py-1.5 rounded-lg bg-slate-800 dark:bg-slate-700 text-white text-[11px] font-semibold whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-opacity duration-150 shadow-lg z-20">
+        {title}
+        {/* Caret pointing right toward the button */}
+        <div className="absolute left-full top-1/2 -translate-y-1/2 border-[5px] border-transparent border-l-slate-800 dark:border-l-slate-700" />
+      </div>
+    </div>
+  );
+}
+
+/* ─── Inline confirmation cell ────────────────────────────────── */
+function ConfirmCell({ action, t, onConfirm, onDismiss }) {
+  const meta = {
+    paid:   { label: t.confirmPaidShort,   labelCls: 'text-emerald-600 dark:text-emerald-400', btnCls: 'bg-emerald-500 hover:bg-emerald-600' },
+    cancel: { label: t.confirmCancelShort, labelCls: 'text-amber-600 dark:text-amber-400',   btnCls: 'bg-amber-500 hover:bg-amber-600' },
+    delete: { label: t.confirmDelShort,    labelCls: 'text-rose-600 dark:text-rose-400',     btnCls: 'bg-rose-500 hover:bg-rose-600' },
+  }[action];
+
+  return (
+    <div className="flex items-center gap-1.5 animate-fade-in">
+      <span className={`text-xs font-bold whitespace-nowrap ${meta.labelCls}`}>{meta.label}</span>
+      <button
+        title={t.btnConfirm}
+        onClick={onConfirm}
+        className={`w-8 h-8 rounded-lg text-white flex items-center justify-center transition-colors ${meta.btnCls}`}
+      >
+        <FontAwesomeIcon icon={faCheck} className="text-xs" />
+      </button>
+      <button
+        title={t.btnClose}
+        onClick={onDismiss}
+        className="w-8 h-8 rounded-lg surface-2 border border-app text-app-3 hover:text-app flex items-center justify-center transition-colors"
+      >
+        <FontAwesomeIcon icon={faXmark} className="text-xs" />
+      </button>
+    </div>
+  );
+}
+
 export default function BookingList({ bookings, onRefresh }) {
   const { t } = useLanguage();
-  const [filter, setFilter]     = useState('all');
-  const [search, setSearch]     = useState('');
-  const [selected, setSelected] = useState(null);
+  const [filter, setFilter]                 = useState('all');
+  const [search, setSearch]                 = useState('');
+  const [dateFrom, setDateFrom]             = useState('');
+  const [dateTo, setDateTo]                 = useState('');
+  const [selected, setSelected]             = useState(null);
+  const [openInEditMode, setOpenInEditMode] = useState(false);
+  const [confirm, setConfirm]               = useState(null);
+
+  const hasDateFilter = dateFrom || dateTo;
 
   const counts = {
     all:       bookings.length,
@@ -45,7 +105,37 @@ export default function BookingList({ bookings, onRefresh }) {
   const filtered = [...bookings]
     .sort((a, b) => (a.checkin < b.checkin ? 1 : -1))
     .filter(b => filter === 'all' || b.status === filter)
-    .filter(b => !search || b.name.toLowerCase().includes(search.toLowerCase()));
+    .filter(b => !search || b.name.toLowerCase().includes(search.toLowerCase()))
+    // Date range: show bookings that overlap with [dateFrom, dateTo]
+    .filter(b => {
+      if (!dateFrom && !dateTo) return true;
+      if (dateFrom && dateTo)   return b.checkin <= dateTo && b.checkout >= dateFrom;
+      if (dateFrom)             return b.checkout >= dateFrom;
+      if (dateTo)               return b.checkin  <= dateTo;
+      return true;
+    });
+
+  /* ─── Open modal helpers ─────────────────────────────────────── */
+  function openView(b) { setSelected(b); setOpenInEditMode(false); }
+  function openEdit(b, e) { e.stopPropagation(); setConfirm(null); setSelected(b); setOpenInEditMode(true); }
+  function closeModal()  { setSelected(null); setOpenInEditMode(false); }
+
+  /* ─── Confirm-gated inline handlers ─────────────────────────── */
+  function requestAction(b, action, e) {
+    e.stopPropagation();
+    setConfirm({ id: b.id, action });
+  }
+
+  function executeConfirm(b, e) {
+    e.stopPropagation();
+    if (!confirm) return;
+    if (confirm.action === 'paid')   { saveBooking({ ...b, status: 'paid' });      onRefresh(); }
+    if (confirm.action === 'cancel') { saveBooking({ ...b, status: 'cancelled' }); onRefresh(); }
+    if (confirm.action === 'delete') { deleteBooking(b.id);                        onRefresh(); }
+    setConfirm(null);
+  }
+
+  function dismissConfirm(e) { e.stopPropagation(); setConfirm(null); }
 
   return (
     <div className="space-y-4">
@@ -62,15 +152,15 @@ export default function BookingList({ bookings, onRefresh }) {
           />
         </div>
 
-        {/* Filters — 4-up on desktop, 2x2 on mobile */}
-        <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2">
+        {/* Status filters + date range — same row */}
+        <div className="flex flex-wrap gap-2 items-start">
           {FILTER_IDS.map(id => {
             const isActive = filter === id;
             return (
               <button
                 key={id}
-                onClick={() => setFilter(id)}
-                className={`flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold border transition-all ${
+                onClick={() => { setFilter(id); setConfirm(null); }}
+                className={`flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold border transition-all flex-1 min-w-[calc(50%-4px)] md:flex-none ${
                   isActive
                     ? 'bg-primary-500 text-white border-primary-500'
                     : 'surface-2 text-app-2 border-app hover:border-primary-500 hover:text-primary-500'
@@ -85,7 +175,26 @@ export default function BookingList({ bookings, onRefresh }) {
               </button>
             );
           })}
+
+          {/* Date range picker — same row on desktop, full width on mobile */}
+          <div className="w-full md:flex-1 md:min-w-[220px]">
+            <DateRangePicker
+              checkin={dateFrom}
+              checkout={dateTo}
+              onChange={(from, to) => { setDateFrom(from); setDateTo(to); }}
+              bookedRanges={[]}
+              allowPast
+              placeholder={t.filterDatePh}
+            />
+          </div>
         </div>
+
+        {/* Active date filter indicator */}
+        {hasDateFilter && (
+          <p className="mt-2 text-[11px] text-primary-500 font-semibold">
+            {t.filterActive(filtered.length)}
+          </p>
+        )}
       </div>
 
       {/* Empty state */}
@@ -97,12 +206,13 @@ export default function BookingList({ bookings, onRefresh }) {
       ) : (
         <div className="card overflow-hidden">
           {/* Desktop column headers */}
-          <div className="hidden md:grid grid-cols-[40px_1fr_120px_120px_140px] gap-3 px-4 py-3 border-b border-app surface-2 text-[11px] font-bold uppercase tracking-wider text-app-3">
+          <div className="hidden md:grid grid-cols-[40px_1fr_110px_110px_110px_164px] gap-3 pl-4 pr-6 py-3 border-b border-app surface-2 text-[11px] font-bold uppercase tracking-wider text-app-3">
             <span />
             <span>{t.colGuest}</span>
             <span>{t.colPlatform}</span>
             <span>{t.colAmount}</span>
             <span>{t.colStatus}</span>
+            <span>{t.colActions}</span>
           </div>
 
           <div className="divide-y divide-[var(--border)]">
@@ -111,21 +221,23 @@ export default function BookingList({ bookings, onRefresh }) {
               const avatarCls = AVATAR_CLASS[b.source] || 'avatar avatar-other';
               const sourceCls = SOURCE_CHIP[b.source]  || 'chip chip-other';
               const srcLabel  = t.sources[b.source]    || b.source;
-              const stripe = b.status === 'paid' ? 'border-l-[3px] border-emerald-500' :
-                             b.status === 'pending' ? 'border-l-[3px] border-amber-500' :
+              const stripe = b.status === 'paid'      ? 'border-l-[3px] border-emerald-500' :
+                             b.status === 'pending'   ? 'border-l-[3px] border-amber-500' :
                              b.status === 'cancelled' ? 'border-l-[3px] border-rose-500 opacity-60' : '';
 
+              const isConfirming = confirm?.id === b.id;
+
               return (
-                <button
+                <div
                   key={b.id}
-                  onClick={() => setSelected(b)}
-                  className={`w-full text-left grid md:grid-cols-[40px_1fr_120px_120px_140px] grid-cols-[40px_1fr] gap-3 px-3 md:px-4 py-3 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors ${stripe}`}
+                  onClick={() => openView(b)}
+                  className={`w-full text-left grid md:grid-cols-[40px_1fr_110px_110px_110px_164px] grid-cols-[40px_1fr] gap-3 px-3 md:pl-4 md:pr-6 py-3 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors cursor-pointer ${stripe}`}
                 >
                   {/* Avatar */}
-                  <div className={`${avatarCls} w-10 h-10`}>{initials(b.name)}</div>
+                  <div className={`${avatarCls} w-10 h-10 self-center`}>{initials(b.name)}</div>
 
                   {/* Name + dates */}
-                  <div className="min-w-0">
+                  <div className="min-w-0 self-center">
                     <div className="font-semibold text-sm text-app truncate">{b.name}</div>
                     <div className="flex flex-wrap items-center gap-1.5 mt-1 text-xs text-app-3">
                       <span className="font-semibold text-app-2">{dayjs(b.checkin).format('DD.MM.YY')}</span>
@@ -148,19 +260,80 @@ export default function BookingList({ bookings, onRefresh }) {
                         </span>
                       )}
                     </div>
-
-                    {/* Mobile-only inline source + amount */}
+                    {/* Mobile-only: source + amount */}
                     <div className="md:hidden flex items-center justify-between mt-2">
                       <span className={sourceCls}>{srcLabel}</span>
                       <span className="font-bold text-sm">{fmtEur(b.amount)}</span>
                     </div>
                   </div>
 
-                  {/* Desktop columns */}
-                  <div className="hidden md:flex items-center"><span className={sourceCls}>{srcLabel}</span></div>
-                  <div className="hidden md:flex items-center font-bold text-sm">{fmtEur(b.amount)}</div>
-                  <div className="hidden md:flex items-center"><span className={STATUS_CLASS[b.status]}>{t.status[b.status]}</span></div>
-                </button>
+                  {/* Desktop: Platform */}
+                  <div className="hidden md:flex items-center self-center">
+                    <span className={sourceCls}>{srcLabel}</span>
+                  </div>
+
+                  {/* Desktop: Amount */}
+                  <div className="hidden md:flex items-center self-center font-bold text-sm">
+                    {fmtEur(b.amount)}
+                  </div>
+
+                  {/* Desktop: Status */}
+                  <div className="hidden md:flex items-center self-center">
+                    <span className={STATUS_CLASS[b.status]}>{t.status[b.status]}</span>
+                  </div>
+
+                  {/* Desktop: Actions column */}
+                  <div
+                    className="hidden md:flex items-center self-center"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    {isConfirming ? (
+                      /* ── Inline confirmation ── */
+                      <ConfirmCell
+                        action={confirm.action}
+                        t={t}
+                        onConfirm={e => executeConfirm(b, e)}
+                        onDismiss={dismissConfirm}
+                      />
+                    ) : (
+                      /* ── Normal action buttons ── */
+                      <div className="flex items-center gap-0.5">
+                        {/* Edit */}
+                        <ActionBtn
+                          icon={faPenToSquare}
+                          title={t.btnEdit}
+                          colorCls="text-blue-500 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/40 dark:hover:text-blue-300"
+                          onClick={e => openEdit(b, e)}
+                        />
+                        {/* Mark Paid — pending only */}
+                        {b.status === 'pending' && (
+                          <ActionBtn
+                            icon={faCheck}
+                            title={t.btnMarkPaid}
+                            colorCls="text-emerald-500 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-300"
+                            onClick={e => requestAction(b, 'paid', e)}
+                          />
+                        )}
+                        {/* Cancel — paid or pending */}
+                        {(b.status === 'paid' || b.status === 'pending') && (
+                          <ActionBtn
+                            icon={faBan}
+                            title={t.btnCancelBkg}
+                            colorCls="text-amber-500 hover:bg-amber-100 hover:text-amber-700 dark:hover:bg-amber-900/40 dark:hover:text-amber-300"
+                            onClick={e => requestAction(b, 'cancel', e)}
+                          />
+                        )}
+                        {/* Delete */}
+                        <ActionBtn
+                          icon={faTrash}
+                          title={t.btnDelete}
+                          colorCls="text-rose-500 hover:bg-rose-100 hover:text-rose-700 dark:hover:bg-rose-900/40 dark:hover:text-rose-300"
+                          onClick={e => requestAction(b, 'delete', e)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -168,7 +341,12 @@ export default function BookingList({ bookings, onRefresh }) {
       )}
 
       {selected && (
-        <BookingModal booking={selected} onClose={() => setSelected(null)} onRefresh={onRefresh} />
+        <BookingModal
+          booking={selected}
+          initialEditing={openInEditMode}
+          onClose={closeModal}
+          onRefresh={onRefresh}
+        />
       )}
     </div>
   );
