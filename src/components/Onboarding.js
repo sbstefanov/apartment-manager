@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHouse, faLocationDot, faPlus, faCheck, faArrowRight, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faHouse, faLocationDot, faPlus, faCheck, faArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { saveApartment } from '../services/storage';
 import { useLanguage } from '../context/LanguageContext';
 import { useApartment } from '../context/ApartmentContext';
@@ -49,11 +49,7 @@ export default function Onboarding() {
     // ApartmentContext ще обнови → App.js ще премине към главното приложение
   }
 
-  function handleRemove(id) {
-    setAdded(prev => prev.filter(a => a.id !== id));
-  }
-
-  return (
+return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 p-4">
       <div className="w-full max-w-md space-y-4">
 

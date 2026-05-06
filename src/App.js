@@ -3,7 +3,7 @@ import './App.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faSun, faMoon, faChevronDown, faCheck, faHouse,
-  faArrowRightFromBracket, faGear, faPlus, faEnvelope, faCalendarDays,
+  faArrowRightFromBracket, faGear,
 } from '@fortawesome/free-solid-svg-icons';
 import Tabs from './components/Tabs';
 import Calendar from './components/Calendar';
