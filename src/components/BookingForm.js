@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faPhone, faEnvelope, faUserGroup, faCoins, faTag, faNoteSticky } from '@fortawesome/free-solid-svg-icons';
+import {
+  faUser, faPhone, faEnvelope, faUserGroup, faCoins, faTag, faNoteSticky, faHouse,
+} from '@fortawesome/free-solid-svg-icons';
 import { saveBooking } from '../services/storage';
 import DateRangePicker from './DateRangePicker';
 import { useLanguage } from '../context/LanguageContext';
+import { useApartment } from '../context/ApartmentContext';
 
 const EMPTY = {
   name: '', phone: '', email: '', persons: 2,
   checkin: '', checkout: '', amount: '', nightRate: '',
-  status: 'pending', source: 'Директна', notes: '',
+  status: 'pending', source: 'Директна', notes: '', apartment_id: null,
 };
 
 function Field({ label, error, icon, children, full }) {
@@ -17,7 +20,10 @@ function Field({ label, error, icon, children, full }) {
       {label && <label className="block text-xs font-semibold text-app-2 mb-1.5">{label}</label>}
       <div className="relative">
         {icon && (
-          <FontAwesomeIcon icon={icon} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-app-3 text-sm pointer-events-none" />
+          <FontAwesomeIcon
+            icon={icon}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-app-3 text-sm pointer-events-none"
+          />
         )}
         {children}
       </div>
@@ -28,7 +34,13 @@ function Field({ label, error, icon, children, full }) {
 
 export default function BookingForm({ bookings, onRefresh, onNavigate, initial = null, onSave = null }) {
   const { t } = useLanguage();
-  const [form, setForm]     = useState(initial || EMPTY);
+  const { apartments, currentId } = useApartment();
+
+  const [form, setForm] = useState(
+    initial
+      ? { ...EMPTY, ...initial }
+      : { ...EMPTY, apartment_id: currentId !== 'all' ? currentId : null }
+  );
   const [errors, setErrors] = useState({});
 
   const nightCount = form.checkin && form.checkout
@@ -65,7 +77,7 @@ export default function BookingForm({ bookings, onRefresh, onNavigate, initial =
     return bookings.find(b => b.status !== 'cancelled' && form.checkin < b.checkout && form.checkout > b.checkin);
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
@@ -76,15 +88,17 @@ export default function BookingForm({ bookings, onRefresh, onNavigate, initial =
     }
     // eslint-disable-next-line no-unused-vars
     const { nightRate, ...formData } = form;
-    saveBooking({
-      ...(initial ? { id: initial.id, createdAt: initial.createdAt } : { id: crypto.randomUUID(), createdAt: new Date().toISOString() }),
+    await saveBooking({
+      id: initial ? initial.id : crypto.randomUUID(),
       ...formData,
-      persons: Number(formData.persons),
-      amount:  Number(formData.amount),
+      persons:      Number(formData.persons),
+      amount:       Number(formData.amount),
+      apartment_id: formData.apartment_id || null,
     });
-    onRefresh();
+    await onRefresh();
     if (onSave) { onSave(); return; }
-    setForm(EMPTY); setErrors({});
+    setForm({ ...EMPTY, apartment_id: currentId !== 'all' ? currentId : null });
+    setErrors({});
     if (onNavigate) onNavigate('calendar');
   }
 
@@ -99,20 +113,28 @@ export default function BookingForm({ bookings, onRefresh, onNavigate, initial =
         {/* Section 1: Guest */}
         <Section label={t.secGuest}>
           <Field label={t.fldName} error={errors.name} icon={faUser}>
-            <input className={inputCls(errors.name)} type="text" value={form.name}
-              onChange={e => set('name', e.target.value)} placeholder={t.phName} />
+            <input
+              className={inputCls(errors.name)} type="text" value={form.name}
+              onChange={e => set('name', e.target.value)} placeholder={t.phName}
+            />
           </Field>
           <Field label={t.fldPersons} icon={faUserGroup}>
-            <input className="input pl-10" type="number" min="1" value={form.persons}
-              onChange={e => set('persons', e.target.value)} />
+            <input
+              className="input pl-10" type="number" min="1" value={form.persons}
+              onChange={e => set('persons', e.target.value)}
+            />
           </Field>
           <Field label={t.fldPhone} icon={faPhone}>
-            <input className="input pl-10" type="tel" value={form.phone}
-              onChange={e => set('phone', e.target.value)} placeholder={t.phPhone} />
+            <input
+              className="input pl-10" type="tel" value={form.phone}
+              onChange={e => set('phone', e.target.value)} placeholder={t.phPhone}
+            />
           </Field>
           <Field label={t.fldEmail} icon={faEnvelope}>
-            <input className="input pl-10" type="email" value={form.email}
-              onChange={e => set('email', e.target.value)} placeholder="example@mail.com" />
+            <input
+              className="input pl-10" type="email" value={form.email}
+              onChange={e => set('email', e.target.value)} placeholder="example@mail.com"
+            />
           </Field>
         </Section>
 
@@ -135,12 +157,16 @@ export default function BookingForm({ bookings, onRefresh, onNavigate, initial =
         {/* Section 3: Payment */}
         <Section label={t.secPayment}>
           <Field label={t.fldNightRate} icon={faCoins}>
-            <input className="input pl-10" type="number" min="0" step="1" value={form.nightRate}
-              onChange={e => set('nightRate', e.target.value)} placeholder={t.phNightRate} />
+            <input
+              className="input pl-10" type="number" min="0" step="1" value={form.nightRate}
+              onChange={e => set('nightRate', e.target.value)} placeholder={t.phNightRate}
+            />
           </Field>
           <Field label={t.fldAmount} error={errors.amount} icon={faCoins}>
-            <input className={inputCls(errors.amount)} type="number" min="0" step="0.01" value={form.amount}
-              onChange={e => set('amount', e.target.value)} placeholder={t.phAmount} />
+            <input
+              className={inputCls(errors.amount)} type="number" min="0" step="0.01" value={form.amount}
+              onChange={e => set('amount', e.target.value)} placeholder={t.phAmount}
+            />
           </Field>
           {nightCount > 0 && form.nightRate && Number(form.nightRate) > 0 && (
             <div className="col-span-2 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-300 text-xs font-semibold py-2 px-3 rounded-lg">
@@ -163,7 +189,25 @@ export default function BookingForm({ bookings, onRefresh, onNavigate, initial =
           </Field>
         </Section>
 
-        {/* Section 4: Notes */}
+        {/* Section 4: Apartment (only if user has apartments) */}
+        {apartments.length > 0 && (
+          <Section label={t.fldApartment} cols={1}>
+            <Field icon={faHouse}>
+              <select
+                className="input pl-10"
+                value={form.apartment_id || ''}
+                onChange={e => set('apartment_id', e.target.value || null)}
+              >
+                <option value="">{t.aptNone}</option>
+                {apartments.map(a => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+            </Field>
+          </Section>
+        )}
+
+        {/* Section 5: Notes */}
         <Section label={t.secNotes} cols={1}>
           <Field icon={faNoteSticky}>
             <textarea

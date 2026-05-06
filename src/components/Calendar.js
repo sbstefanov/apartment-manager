@@ -251,7 +251,7 @@ export default function Calendar({ bookings, onRefresh }) {
       </div>
 
       {selected && (
-        <BookingModal booking={selected} onClose={() => setSelected(null)} onRefresh={onRefresh} />
+        <BookingModal booking={selected} bookings={bookings} onClose={() => setSelected(null)} onRefresh={onRefresh} />
       )}
     </div>
   );

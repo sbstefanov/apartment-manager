@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark, faPenToSquare, faCheck, faBan, faTrash, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
-import { saveBooking, deleteBooking, getBookings } from '../services/storage';
+import { saveBooking, deleteBooking } from '../services/storage';
 import { useLanguage, fmtEur } from '../context/LanguageContext';
 import BookingForm from './BookingForm';
 
@@ -46,7 +46,7 @@ function ConfirmBanner({ action, bookingName, t, onConfirm, onDismiss }) {
   );
 }
 
-export default function BookingModal({ booking, onClose, onRefresh, initialEditing = false }) {
+export default function BookingModal({ booking, bookings = [], onClose, onRefresh, initialEditing = false }) {
   const { t } = useLanguage();
   const [editing, setEditing]           = useState(initialEditing);
   const [confirmAction, setConfirmAction] = useState(null); // 'paid' | 'cancel' | 'delete'
@@ -62,13 +62,13 @@ export default function BookingModal({ booking, onClose, onRefresh, initialEditi
 
   if (!booking) return null;
 
-  function executeConfirm() {
-    if (confirmAction === 'paid')   { saveBooking({ ...booking, status: 'paid' });      onRefresh(); onClose(); }
-    if (confirmAction === 'cancel') { saveBooking({ ...booking, status: 'cancelled' }); onRefresh(); onClose(); }
-    if (confirmAction === 'delete') { deleteBooking(booking.id);                        onRefresh(); onClose(); }
+  async function executeConfirm() {
+    if (confirmAction === 'paid')   { await saveBooking({ ...booking, status: 'paid' });      await onRefresh(); onClose(); }
+    if (confirmAction === 'cancel') { await saveBooking({ ...booking, status: 'cancelled' }); await onRefresh(); onClose(); }
+    if (confirmAction === 'delete') { await deleteBooking(booking.id);                        await onRefresh(); onClose(); }
   }
 
-  function handleSaved() { onRefresh(); onClose(); }
+  async function handleSaved() { await onRefresh(); onClose(); }
   function handleOverlay(e) { if (e.target === e.currentTarget) onClose(); }
 
   const n = nights(booking.checkin, booking.checkout);
@@ -90,7 +90,7 @@ export default function BookingModal({ booking, onClose, onRefresh, initialEditi
             <div className="overflow-y-auto">
               <BookingForm
                 initial={booking}
-                bookings={getBookings().filter(b => b.id !== booking.id)}
+                bookings={bookings.filter(b => b.id !== booking.id)}
                 onRefresh={onRefresh}
                 onSave={handleSaved}
               />

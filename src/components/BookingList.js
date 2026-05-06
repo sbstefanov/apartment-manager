@@ -126,12 +126,12 @@ export default function BookingList({ bookings, onRefresh }) {
     setConfirm({ id: b.id, action });
   }
 
-  function executeConfirm(b, e) {
+  async function executeConfirm(b, e) {
     e.stopPropagation();
     if (!confirm) return;
-    if (confirm.action === 'paid')   { saveBooking({ ...b, status: 'paid' });      onRefresh(); }
-    if (confirm.action === 'cancel') { saveBooking({ ...b, status: 'cancelled' }); onRefresh(); }
-    if (confirm.action === 'delete') { deleteBooking(b.id);                        onRefresh(); }
+    if (confirm.action === 'paid')   { await saveBooking({ ...b, status: 'paid' });      await onRefresh(); }
+    if (confirm.action === 'cancel') { await saveBooking({ ...b, status: 'cancelled' }); await onRefresh(); }
+    if (confirm.action === 'delete') { await deleteBooking(b.id);                        await onRefresh(); }
     setConfirm(null);
   }
 
@@ -343,6 +343,7 @@ export default function BookingList({ bookings, onRefresh }) {
       {selected && (
         <BookingModal
           booking={selected}
+          bookings={bookings}
           initialEditing={openInEditMode}
           onClose={closeModal}
           onRefresh={onRefresh}
