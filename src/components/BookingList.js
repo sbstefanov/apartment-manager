@@ -12,6 +12,7 @@ import { useLanguage, fmtEur } from '../context/LanguageContext';
 
 const FILTER_IDS = ['all', 'paid', 'pending', 'cancelled'];
 
+
 const STATUS_CLASS = { paid: 'badge badge-paid', pending: 'badge badge-pending', cancelled: 'badge badge-cancelled' };
 const SOURCE_CHIP  = { 'Директна': 'chip chip-direct', 'Airbnb': 'chip chip-airbnb', 'Booking.com': 'chip chip-booking', 'Друго': 'chip chip-other' };
 const AVATAR_CLASS = { 'Директна': 'avatar avatar-direct', 'Airbnb': 'avatar avatar-airbnb', 'Booking.com': 'avatar avatar-booking', 'Друго': 'avatar avatar-other' };

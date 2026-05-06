@@ -56,9 +56,10 @@ function MonthYearPicker({ open, year, month, onClose, onPick }) {
   if (!open) return null;
 
   return (
+    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-30 w-[280px]">
     <div
       ref={ref}
-      className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[280px] z-30 card p-4 animate-pop-in"
+      className="card p-4 animate-pop-in"
     >
       {/* Year nav */}
       <div className="flex items-center justify-between mb-3">
@@ -98,6 +99,7 @@ function MonthYearPicker({ open, year, month, onClose, onPick }) {
           );
         })}
       </div>
+    </div>
     </div>
   );
 }

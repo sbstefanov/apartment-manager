@@ -55,9 +55,9 @@ export default function Tabs({ active, onChange }) {
                     isActive
                       ? isAccent
                         ? 'bg-primary-500'
-                        : 'bg-primary-50'
+                        : 'bg-primary-50 dark:bg-primary-500/20'
                       : isAccent
-                        ? 'bg-primary-50'
+                        ? 'bg-primary-50 dark:bg-primary-500/15'
                         : 'bg-transparent'
                   }`}
                 >

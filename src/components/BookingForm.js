@@ -156,18 +156,20 @@ export default function BookingForm({ bookings, onRefresh, onNavigate, initial =
 
         {/* Section 3: Payment */}
         <Section label={t.secPayment} cols={1}>
-          <Field label={t.fldNightRate} icon={faCoins}>
-            <input
-              className="input pl-10" type="number" min="0" step="1" value={form.nightRate}
-              onChange={e => set('nightRate', e.target.value)} placeholder={t.phNightRate}
-            />
-          </Field>
-          <Field label={t.fldAmount} error={errors.amount} icon={faCoins}>
-            <input
-              className={inputCls(errors.amount)} type="number" min="0" step="0.01" value={form.amount}
-              onChange={e => set('amount', e.target.value)} placeholder={t.phAmount}
-            />
-          </Field>
+          <div className="flex flex-col gap-3">
+            <Field label={t.fldNightRate} icon={faCoins}>
+              <input
+                className="input pl-10" type="number" min="0" step="1" value={form.nightRate}
+                onChange={e => set('nightRate', e.target.value)} placeholder={t.phNightRate}
+              />
+            </Field>
+            <Field label={t.fldAmount} error={errors.amount} icon={faCoins}>
+              <input
+                className={inputCls(errors.amount)} type="number" min="0" step="0.01" value={form.amount}
+                onChange={e => set('amount', e.target.value)} placeholder={t.phAmount}
+              />
+            </Field>
+          </div>
           {nightCount > 0 && form.nightRate && Number(form.nightRate) > 0 && (
             <div className="col-span-2 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-300 text-xs font-semibold py-2 px-3 rounded-lg">
               {t.calcNights(nightCount, Number(form.nightRate), nightCount * Number(form.nightRate))}

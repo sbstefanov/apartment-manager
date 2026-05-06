@@ -139,19 +139,19 @@ export default function DateRangePicker({ checkin, checkout, onChange, bookedRan
 
       {/* Popup */}
       {open && (
-        <div className="absolute top-full mt-2 left-0 md:left-0 right-0 md:right-auto md:w-[340px] z-50 card p-4 animate-pop-in">
+        <div className="absolute top-full mt-2 left-0 w-full md:w-[340px] z-50 card p-4 animate-pop-in">
           {/* Month nav */}
           <div className="flex items-center justify-between mb-2">
             <button
               onClick={() => setMonth(m => m.subtract(1, 'month'))}
-              className="w-8 h-8 rounded-lg border border-app hover:border-primary-500 hover:text-primary-500 flex items-center justify-center"
+              className="w-8 h-8 rounded-lg border border-app hover:border-primary-500 hover:text-primary-500 flex items-center justify-center flex-shrink-0"
             >
               <FontAwesomeIcon icon={faChevronLeft} />
             </button>
-            <span className="font-bold text-sm capitalize">{t.months[month.month()]} {month.year()}</span>
+            <span className="font-bold text-sm capitalize w-40 text-center">{t.months[month.month()]} {month.year()}</span>
             <button
               onClick={() => setMonth(m => m.add(1, 'month'))}
-              className="w-8 h-8 rounded-lg border border-app hover:border-primary-500 hover:text-primary-500 flex items-center justify-center"
+              className="w-8 h-8 rounded-lg border border-app hover:border-primary-500 hover:text-primary-500 flex items-center justify-center flex-shrink-0"
             >
               <FontAwesomeIcon icon={faChevronRight} />
             </button>
@@ -168,7 +168,7 @@ export default function DateRangePicker({ checkin, checkout, onChange, bookedRan
           </div>
 
           {/* Grid */}
-          <div className="grid grid-cols-7 gap-0.5">
+          <div className="grid grid-cols-7 gap-0.5 min-h-[260px]">
             {cells.map(cell => {
               if (cell.empty) return <span key={cell.key} className="aspect-square" />;
               return (

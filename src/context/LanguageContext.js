@@ -140,7 +140,10 @@ const translations = {
     onboardSubtitle: 'Добавете първия си имот за да започнете',
     onboardName:     'Име на имота *',
     onboardAddress:  'Адрес (незадължително)',
-    onboardBtn:      'Добави и продължи →',
+    onboardBtn:      'Добави имот',
+    onboardContinue: 'Продължи',
+    onboardAddMore:  'Добави друг имот',
+    onboardAdded:    'Добавени имоти',
     /* Apartments */
     aptAll:      'Всички имоти',
     aptManage:   'Управление на имоти',
@@ -307,7 +310,10 @@ const translations = {
     onboardSubtitle: 'Add your first property to get started',
     onboardName:     'Property name *',
     onboardAddress:  'Address (optional)',
-    onboardBtn:      'Add and continue →',
+    onboardBtn:      'Add property',
+    onboardContinue: 'Continue',
+    onboardAddMore:  'Add another property',
+    onboardAdded:    'Added properties',
     /* Apartments */
     aptAll:      'All properties',
     aptManage:   'Manage properties',
