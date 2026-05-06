@@ -75,6 +75,10 @@
     border-color: var(--border);
   }
   .input::placeholder { color: var(--text-3); }
+  /* Prevent iOS zoom on focus — font-size must be >= 16px */
+  @media (max-width: 767px) {
+    .input { font-size: 16px; }
+  }
   .input-error { @apply border-red-500 focus:ring-red-500/20 focus:border-red-500; }
 
   /* Status badges */
