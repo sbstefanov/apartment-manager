@@ -155,7 +155,7 @@ export default function BookingForm({ bookings, onRefresh, onNavigate, initial =
         </Section>
 
         {/* Section 3: Payment */}
-        <Section label={t.secPayment}>
+        <Section label={t.secPayment} cols={1}>
           <Field label={t.fldNightRate} icon={faCoins}>
             <input
               className="input pl-10" type="number" min="0" step="1" value={form.nightRate}
