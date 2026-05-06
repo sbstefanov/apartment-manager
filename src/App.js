@@ -13,6 +13,7 @@ import Revenue from './components/Revenue';
 import Expenses from './components/Expenses';
 import AuthForm from './components/AuthForm';
 import ApartmentManager from './components/ApartmentManager';
+import Onboarding from './components/Onboarding';
 import { getBookings, getExpenses } from './services/storage';
 import { supabase } from './lib/supabase';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
@@ -154,7 +155,7 @@ function AppInner() {
   const [aptManager, setAptManager] = useState(false);
   const { t } = useLanguage();
   const { user } = useAuth();
-  const { currentId, apartments } = useApartment();
+  const { currentId, apartments, loaded: aptsLoaded } = useApartment();
 
   const refresh = useCallback(async () => {
     const [bkgs, exps] = await Promise.all([
@@ -172,6 +173,11 @@ function AppInner() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
+  }
+
+  // Onboarding — show when apartments are loaded but empty
+  if (!loading && aptsLoaded && apartments.length === 0) {
+    return <Onboarding />;
   }
 
   return (

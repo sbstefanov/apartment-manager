@@ -1,27 +1,83 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHouse, faEnvelope, faLock, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faHouse, faEnvelope, faLock, faSpinner, faUser } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
 
+/* ─── Check-email screen ─────────────────────────────────────────── */
+function CheckEmailScreen({ email, onBack, t }) {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 p-4">
+      <div className="w-full max-w-sm">
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-16 h-16 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center mb-4 shadow-pop">
+            <FontAwesomeIcon icon={faHouse} className="text-white text-2xl" />
+          </div>
+        </div>
+
+        <div className="surface rounded-2xl shadow-pop p-8 text-center space-y-5">
+          {/* Email icon */}
+          <div className="w-16 h-16 rounded-full bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center mx-auto">
+            <FontAwesomeIcon icon={faEnvelope} className="text-primary-500 text-2xl" />
+          </div>
+
+          <div>
+            <h2 className="text-xl font-bold text-app">{t.authCheckEmail}</h2>
+            <p className="text-sm text-app-2 mt-2 leading-relaxed">
+              {t.authCheckEmailMsg(email)}
+            </p>
+          </div>
+
+          <button
+            onClick={onBack}
+            className="text-sm font-semibold text-primary-500 hover:text-primary-600 transition-colors"
+          >
+            {t.authCheckEmailBack}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main auth form ─────────────────────────────────────────────── */
 export default function AuthForm() {
   const { t } = useLanguage();
-  const [mode, setMode]       = useState('login');   // 'login' | 'register'
-  const [email, setEmail]     = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError]     = useState('');
-  const [success, setSuccess] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [mode, setMode]           = useState('login'); // 'login' | 'register' | 'check-email'
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName]   = useState('');
+  const [email, setEmail]         = useState('');
+  const [password, setPassword]   = useState('');
+  const [confirm, setConfirm]     = useState('');
+  const [error, setError]         = useState('');
+  const [loading, setLoading]     = useState(false);
 
   const isLogin = mode === 'login';
 
+  // Check-email screen
+  if (mode === 'check-email') {
+    return (
+      <CheckEmailScreen
+        email={email}
+        onBack={() => { setMode('login'); setError(''); }}
+        t={t}
+      />
+    );
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
-    setError(''); setSuccess('');
+    setError('');
 
-    // Basic validation
-    if (!email.includes('@')) { setError(t.authErrEmail); return; }
-    if (password.length < 6)  { setError(t.authErrPassword); return; }
+    // Validation
+    if (!email.includes('@'))   { setError(t.authErrEmail);    return; }
+    if (password.length < 6)    { setError(t.authErrPassword); return; }
+
+    if (!isLogin) {
+      if (!firstName.trim() || !lastName.trim()) { setError(t.authErrName);        return; }
+      if (password !== confirm)                   { setError(t.authErrConfirmPass); return; }
+    }
 
     setLoading(true);
     try {
@@ -29,12 +85,25 @@ export default function AuthForm() {
         const { error: err } = await supabase.auth.signInWithPassword({ email, password });
         if (err) setError(t.authErrInvalid);
       } else {
-        const { error: err } = await supabase.auth.signUp({ email, password });
+        const { data, error: err } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              first_name: firstName.trim(),
+              last_name:  lastName.trim(),
+              full_name:  `${firstName.trim()} ${lastName.trim()}`,
+            },
+          },
+        });
         if (err) {
           setError(err.message.includes('already') ? t.authErrExists : err.message);
+        } else if (data.session) {
+          // Email confirmation disabled — user is logged in immediately
+          // AuthContext will pick up the session via onAuthStateChange
         } else {
-          setSuccess(t.authSuccessReg);
-          setMode('login');
+          // Email confirmation required
+          setMode('check-email');
         }
       }
     } finally {
@@ -44,7 +113,9 @@ export default function AuthForm() {
 
   function switchMode() {
     setMode(m => m === 'login' ? 'register' : 'login');
-    setError(''); setSuccess('');
+    setError('');
+    setFirstName(''); setLastName('');
+    setPassword(''); setConfirm('');
   }
 
   return (
@@ -72,14 +143,38 @@ export default function AuthForm() {
             </div>
           )}
 
-          {/* Success */}
-          {success && (
-            <div className="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-300 text-sm px-4 py-3 rounded-xl">
-              {success}
-            </div>
-          )}
-
           <form onSubmit={handleSubmit} className="space-y-3" noValidate>
+
+            {/* First + Last name — register only */}
+            {!isLogin && (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="relative">
+                  <FontAwesomeIcon icon={faUser} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-app-3 text-sm pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder={t.authFirstName}
+                    value={firstName}
+                    onChange={e => setFirstName(e.target.value)}
+                    className="input pl-10"
+                    autoComplete="given-name"
+                    required
+                  />
+                </div>
+                <div className="relative">
+                  <FontAwesomeIcon icon={faUser} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-app-3 text-sm pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder={t.authLastName}
+                    value={lastName}
+                    onChange={e => setLastName(e.target.value)}
+                    className="input pl-10"
+                    autoComplete="family-name"
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Email */}
             <div className="relative">
               <FontAwesomeIcon icon={faEnvelope} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-app-3 text-sm pointer-events-none" />
@@ -107,6 +202,22 @@ export default function AuthForm() {
                 required
               />
             </div>
+
+            {/* Confirm password — register only */}
+            {!isLogin && (
+              <div className="relative">
+                <FontAwesomeIcon icon={faLock} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-app-3 text-sm pointer-events-none" />
+                <input
+                  type="password"
+                  placeholder={t.authConfirmPass}
+                  value={confirm}
+                  onChange={e => setConfirm(e.target.value)}
+                  className="input pl-10"
+                  autoComplete="new-password"
+                  required
+                />
+              </div>
+            )}
 
             {/* Submit */}
             <button

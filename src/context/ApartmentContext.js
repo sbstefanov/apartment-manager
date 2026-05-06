@@ -7,15 +7,22 @@ const ApartmentContext = createContext();
 export function ApartmentProvider({ children }) {
   const [apartments, setApartments] = useState([]);
   const [currentId, setCurrentId]   = useState(() => localStorage.getItem('apt_id') || 'all');
+  const [loaded, setLoaded]         = useState(false);
   const { user } = useAuth();
 
   const refresh = useCallback(async () => {
     if (!user) return;
     const data = await getApartments();
     setApartments(data);
+    setLoaded(true);
   }, [user]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  // Reset loaded when user logs out
+  useEffect(() => {
+    if (!user) { setApartments([]); setLoaded(false); }
+  }, [user]);
 
   function select(id) {
     setCurrentId(id);
@@ -25,7 +32,7 @@ export function ApartmentProvider({ children }) {
   const current = apartments.find(a => a.id === currentId) ?? null;
 
   return (
-    <ApartmentContext.Provider value={{ apartments, current, currentId, select, refresh }}>
+    <ApartmentContext.Provider value={{ apartments, current, currentId, select, loaded, refresh }}>
       {children}
     </ApartmentContext.Provider>
   );
