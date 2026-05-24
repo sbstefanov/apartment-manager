@@ -37,7 +37,7 @@ export default function Onboarding() {
       setNameErr('');
       setShowForm(false);   // скрива формата след добавяне
     } catch {
-      setNameErr('Грешка при запазване. Опитай отново.');
+      setNameErr(t.errSave);
     } finally {
       setSaving(false);
     }

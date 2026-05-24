@@ -57,12 +57,15 @@ export default function Revenue({ bookings, expenses = [] }) {
   const partialPct   = totalRevenue > 0 ? (partialCollected / totalRevenue) * 100 : 0;
 
   const allActive = bookings.filter(b => b.status !== 'cancelled');
+  const yearStart = `${currentYear}-01-01`;
+  const yearEnd   = `${currentYear + 1}-01-01`;
   const nightsThisYear = allActive
-    .filter(b =>
-      dayjs(b.checkin).year()  === currentYear ||
-      dayjs(b.checkout).year() === currentYear
-    )
-    .reduce((s, b) => s + dayjs(b.checkout).diff(dayjs(b.checkin), 'day'), 0);
+    .filter(b => b.checkin < yearEnd && b.checkout > yearStart)
+    .reduce((s, b) => {
+      const from = b.checkin  > yearStart ? b.checkin  : yearStart;
+      const to   = b.checkout < yearEnd   ? b.checkout : yearEnd;
+      return s + dayjs(to).diff(dayjs(from), 'day');
+    }, 0);
 
   // Monthly breakdown (revenue)
   const monthMap = {};

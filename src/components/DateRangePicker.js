@@ -47,10 +47,13 @@ export default function DateRangePicker({ checkin, checkout, onChange, bookedRan
   function handleDay(dateStr, booked, past) {
     if (past && !allowPast) return;
     if (!checkin || (checkin && checkout)) {
-      onChange(booked ? '' : dateStr, '');
-      if (!booked) return;
+      // Starting a new selection — booked days can't be checkin
+      if (booked) return;
+      onChange(dateStr, '');
     } else {
+      // Picking checkout — ignore booked days and same-day clicks
       if (dateStr === checkin) return;
+      if (booked) return;
       const [s, e] = dateStr > checkin ? [checkin, dateStr] : [dateStr, checkin];
       if (rangeOverlaps(s, e)) return;
       onChange(s, e);

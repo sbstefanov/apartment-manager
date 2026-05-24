@@ -78,7 +78,13 @@ export default function BookingForm({ bookings, onRefresh, onNavigate, initial =
 
   function checkConflict() {
     if (!form.checkin || !form.checkout) return null;
-    return bookings.find(b => b.status !== 'cancelled' && form.checkin < b.checkout && form.checkout > b.checkin);
+    const editingId = initial ? initial.id : null;
+    return bookings.find(b =>
+      b.status !== 'cancelled' &&
+      b.id !== editingId &&
+      form.checkin < b.checkout &&
+      form.checkout > b.checkin
+    );
   }
 
   async function handleSubmit(e) {
