@@ -18,6 +18,7 @@ export default function ApartmentManager({ onClose }) {
   const [saving, setSaving]       = useState(false);
   const [confirmId, setConfirmId] = useState(null);
   const [nameErr, setNameErr]     = useState('');
+  const [switchedToAll, setSwitchedToAll] = useState(false);
 
   function startAdd() {
     setEditing({});
@@ -58,11 +59,15 @@ export default function ApartmentManager({ onClose }) {
   }
 
   async function handleDelete(id) {
-    // If deleting the currently selected apartment, fall back to 'all'
-    if (currentId === id) select('all');
+    const wasCurrent = currentId === id;
+    if (wasCurrent) select('all');
     await deleteApartment(id);
     await refresh();
     setConfirmId(null);
+    if (wasCurrent) {
+      setSwitchedToAll(true);
+      setTimeout(() => setSwitchedToAll(false), 4000);
+    }
   }
 
   return (
@@ -142,6 +147,14 @@ export default function ApartmentManager({ onClose }) {
               <FontAwesomeIcon icon={faPlus} />
               {t.aptAdd}
             </button>
+          )}
+
+          {/* Switched-to-all notice */}
+          {switchedToAll && (
+            <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-sm font-semibold text-amber-700 dark:text-amber-300 animate-fade-in">
+              <span>⚠️</span>
+              <span>{t.aptSwitchedToAll}</span>
+            </div>
           )}
 
           {/* Apartment list */}

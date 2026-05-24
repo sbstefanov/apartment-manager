@@ -18,7 +18,7 @@ const STATUS_CLASS = {
 };
 
 /* ─── Confirm banner shared by both mobile actions & desktop (if ever needed) ── */
-function ConfirmBanner({ action, bookingName, t, onConfirm, onDismiss }) {
+function ConfirmBanner({ action, bookingName, t, onConfirm, onDismiss, saving = false }) {
   const meta = {
     paid:   { msg: t.confirmPaidMsg,   cls: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800', iconCls: 'text-emerald-500', btnCls: 'bg-emerald-500 hover:bg-emerald-600' },
     cancel: { msg: t.confirmCancelMsg, cls: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800',         iconCls: 'text-amber-500',   btnCls: 'bg-amber-500 hover:bg-amber-600' },
@@ -32,13 +32,16 @@ function ConfirmBanner({ action, bookingName, t, onConfirm, onDismiss }) {
       <div className="flex items-center gap-2 flex-shrink-0">
         <button
           onClick={onConfirm}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-colors ${meta.btnCls}`}
+          disabled={saving}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-colors flex items-center gap-1.5 ${meta.btnCls} ${saving ? 'opacity-70 cursor-wait' : ''}`}
         >
+          {saving && <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
           {t.btnConfirm}
         </button>
         <button
           onClick={onDismiss}
-          className="w-8 h-8 rounded-lg surface border border-app flex items-center justify-center text-app-3 hover:text-app"
+          disabled={saving}
+          className="w-8 h-8 rounded-lg surface border border-app flex items-center justify-center text-app-3 hover:text-app disabled:opacity-50"
         >
           <FontAwesomeIcon icon={faXmark} className="text-xs" />
         </button>
@@ -49,8 +52,9 @@ function ConfirmBanner({ action, bookingName, t, onConfirm, onDismiss }) {
 
 export default function BookingModal({ booking, bookings = [], onClose, onRefresh, initialEditing = false }) {
   const { t } = useLanguage();
-  const [editing, setEditing]           = useState(initialEditing);
+  const [editing, setEditing]             = useState(initialEditing);
   const [confirmAction, setConfirmAction] = useState(null); // 'paid' | 'cancel' | 'delete'
+  const [saving, setSaving]               = useState(false);
 
   // Lock body scroll
   useEffect(() => {
@@ -64,9 +68,15 @@ export default function BookingModal({ booking, bookings = [], onClose, onRefres
   if (!booking) return null;
 
   async function executeConfirm() {
-    if (confirmAction === 'paid')   { await saveBooking({ ...booking, status: 'paid' });      await onRefresh(); onClose(); }
-    if (confirmAction === 'cancel') { await saveBooking({ ...booking, status: 'cancelled' }); await onRefresh(); onClose(); }
-    if (confirmAction === 'delete') { await deleteBooking(booking.id);                        await onRefresh(); onClose(); }
+    if (saving) return;
+    setSaving(true);
+    try {
+      if (confirmAction === 'paid')   { await saveBooking({ ...booking, status: 'paid' });      await onRefresh(); onClose(); }
+      if (confirmAction === 'cancel') { await saveBooking({ ...booking, status: 'cancelled' }); await onRefresh(); onClose(); }
+      if (confirmAction === 'delete') { await deleteBooking(booking.id);                        await onRefresh(); onClose(); }
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleSaved() { await onRefresh(); onClose(); }
@@ -137,6 +147,7 @@ export default function BookingModal({ booking, bookings = [], onClose, onRefres
                   action={confirmAction}
                   bookingName={booking.name}
                   t={t}
+                  saving={saving}
                   onConfirm={executeConfirm}
                   onDismiss={() => setConfirmAction(null)}
                 />

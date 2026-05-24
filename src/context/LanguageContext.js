@@ -171,7 +171,8 @@ const translations = {
     aptNamePh:   'Апартамент 1',
     aptAddressPh:'гр. София, бул. Витоша 1',
     aptNotesPh:  'Допълнителна информация...',
-    aptNone:     'Без имот',
+    aptNone:          'Без имот',
+    aptSwitchedToAll: 'Превключено на: Всички имоти',
     /* Expenses */
     expAdd:         'Нов разход',
     expEdit:        'Редактирай разход',
@@ -358,7 +359,8 @@ const translations = {
     aptNamePh:   'Apartment 1',
     aptAddressPh:'123 Main St, City',
     aptNotesPh:  'Additional information...',
-    aptNone:     'No property',
+    aptNone:          'No property',
+    aptSwitchedToAll: 'Switched to: All properties',
     /* Expenses */
     expAdd:         'Add expense',
     expEdit:        'Edit expense',

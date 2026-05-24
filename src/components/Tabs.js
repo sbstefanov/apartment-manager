@@ -42,7 +42,6 @@ export default function Tabs({ active, onChange }) {
         <div className="grid grid-cols-5">
           {TABS.map(tab => {
             const isActive = active === tab.id;
-            const isAccent = tab.id === 'new';
             return (
               <button
                 key={tab.id}
@@ -52,22 +51,12 @@ export default function Tabs({ active, onChange }) {
               >
                 <div
                   className={`w-10 h-7 flex items-center justify-center rounded-full transition-all ${
-                    isActive
-                      ? isAccent
-                        ? 'bg-primary-500'
-                        : 'bg-primary-50 dark:bg-primary-500/20'
-                      : isAccent
-                        ? 'bg-primary-50 dark:bg-primary-500/15'
-                        : 'bg-transparent'
+                    isActive ? 'bg-primary-50 dark:bg-primary-500/20' : 'bg-transparent'
                   }`}
                 >
                   <FontAwesomeIcon
                     icon={tab.icon}
-                    className={`text-base ${
-                      isActive
-                        ? isAccent ? 'text-white' : 'text-primary-500'
-                        : isAccent ? 'text-primary-500' : 'text-app-3'
-                    }`}
+                    className={`text-base ${isActive ? 'text-primary-500' : 'text-app-3'}`}
                   />
                 </div>
                 <span className={`text-[9px] font-semibold ${isActive ? 'text-primary-500' : 'text-app-3'}`}>

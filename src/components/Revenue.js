@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faSackDollar, faCircleCheck, faClock, faMoon, faChartColumn,
-  faArrowTrendDown, faScaleBalanced,
+  faArrowTrendDown, faScaleBalanced, faHouse,
 } from '@fortawesome/free-solid-svg-icons';
 import { useLanguage, fmtEur } from '../context/LanguageContext';
+import { useApartment } from '../context/ApartmentContext';
 
 const PLATFORMS = ['Директна', 'Airbnb', 'Booking.com', 'OLX', 'Facebook', 'Друго'];
 const PLATFORM_BAR = {
@@ -19,6 +20,7 @@ const PLATFORM_BAR = {
 
 export default function Revenue({ bookings, expenses = [] }) {
   const { t } = useLanguage();
+  const { currentId, current: currentApt } = useApartment();
   const currentYear = dayjs().year();
 
   const years = [
@@ -29,6 +31,9 @@ export default function Revenue({ bookings, expenses = [] }) {
   ].sort((a, b) => b - a);
 
   const [yearFilter, setYearFilter] = useState('all');
+
+  // Reset year filter when apartment changes
+  useEffect(() => { setYearFilter('all'); }, [currentId]);
 
   const filtered = yearFilter === 'all'
     ? bookings
@@ -93,8 +98,14 @@ export default function Revenue({ bookings, expenses = [] }) {
 
   return (
     <div className="space-y-5">
-      {/* Year filter */}
-      <div className="flex justify-end">
+      {/* Apartment indicator + Year filter */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        {/* Which property's data is shown */}
+        <div className="flex items-center gap-2 text-sm font-semibold text-app-2">
+          <FontAwesomeIcon icon={faHouse} className="text-primary-400 text-xs" />
+          <span>{currentId === 'all' ? t.aptAll : (currentApt?.name ?? t.aptAll)}</span>
+        </div>
+
         <select
           value={yearFilter}
           onChange={e => setYearFilter(e.target.value)}

@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faMagnifyingGlass, faArrowRight, faMoon, faUserGroup, faCalendarXmark,
-  faPenToSquare, faCheck, faBan, faTrash, faXmark,
+  faPenToSquare, faCheck, faBan, faTrash, faXmark, faChevronRight,
 } from '@fortawesome/free-solid-svg-icons';
 import BookingModal from './BookingModal';
 import DateRangePicker from './DateRangePicker';
@@ -56,7 +56,7 @@ function ActionBtn({ icon, title, colorCls, onClick }) {
 }
 
 /* ─── Inline confirmation cell ────────────────────────────────── */
-function ConfirmCell({ action, t, onConfirm, onDismiss }) {
+function ConfirmCell({ action, t, onConfirm, onDismiss, saving = false }) {
   const meta = {
     paid:   { label: t.confirmPaidShort,   labelCls: 'text-emerald-600 dark:text-emerald-400', btnCls: 'bg-emerald-500 hover:bg-emerald-600' },
     cancel: { label: t.confirmCancelShort, labelCls: 'text-amber-600 dark:text-amber-400',   btnCls: 'bg-amber-500 hover:bg-amber-600' },
@@ -69,14 +69,19 @@ function ConfirmCell({ action, t, onConfirm, onDismiss }) {
       <button
         title={t.btnConfirm}
         onClick={onConfirm}
-        className={`w-8 h-8 rounded-lg text-white flex items-center justify-center transition-colors ${meta.btnCls}`}
+        disabled={saving}
+        className={`w-8 h-8 rounded-lg text-white flex items-center justify-center transition-colors ${meta.btnCls} ${saving ? 'opacity-60 cursor-wait' : ''}`}
       >
-        <FontAwesomeIcon icon={faCheck} className="text-xs" />
+        {saving
+          ? <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+          : <FontAwesomeIcon icon={faCheck} className="text-xs" />
+        }
       </button>
       <button
         title={t.btnClose}
         onClick={onDismiss}
-        className="w-8 h-8 rounded-lg surface-2 border border-app text-app-3 hover:text-app flex items-center justify-center transition-colors"
+        disabled={saving}
+        className="w-8 h-8 rounded-lg surface-2 border border-app text-app-3 hover:text-app flex items-center justify-center transition-colors disabled:opacity-50"
       >
         <FontAwesomeIcon icon={faXmark} className="text-xs" />
       </button>
@@ -93,6 +98,7 @@ export default function BookingList({ bookings, onRefresh }) {
   const [selected, setSelected]             = useState(null);
   const [openInEditMode, setOpenInEditMode] = useState(false);
   const [confirm, setConfirm]               = useState(null);
+  const [saving, setSaving]                 = useState(false);
 
   const hasDateFilter = dateFrom || dateTo;
 
@@ -130,11 +136,16 @@ export default function BookingList({ bookings, onRefresh }) {
 
   async function executeConfirm(b, e) {
     e.stopPropagation();
-    if (!confirm) return;
-    if (confirm.action === 'paid')   { await saveBooking({ ...b, status: 'paid' });      await onRefresh(); }
-    if (confirm.action === 'cancel') { await saveBooking({ ...b, status: 'cancelled' }); await onRefresh(); }
-    if (confirm.action === 'delete') { await deleteBooking(b.id);                        await onRefresh(); }
-    setConfirm(null);
+    if (!confirm || saving) return;
+    setSaving(true);
+    try {
+      if (confirm.action === 'paid')   { await saveBooking({ ...b, status: 'paid' });      await onRefresh(); }
+      if (confirm.action === 'cancel') { await saveBooking({ ...b, status: 'cancelled' }); await onRefresh(); }
+      if (confirm.action === 'delete') { await deleteBooking(b.id);                        await onRefresh(); }
+      setConfirm(null);
+    } finally {
+      setSaving(false);
+    }
   }
 
   function dismissConfirm(e) { e.stopPropagation(); setConfirm(null); }
@@ -234,15 +245,17 @@ export default function BookingList({ bookings, onRefresh }) {
                 <div
                   key={b.id}
                   onClick={() => openView(b)}
-                  className={`w-full text-left grid md:grid-cols-[40px_1fr_110px_110px_110px_164px] grid-cols-[40px_1fr] gap-3 px-3 md:pl-4 md:pr-6 py-3 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors cursor-pointer ${stripe}`}
+                  className={`w-full text-left grid md:grid-cols-[40px_1fr_110px_110px_110px_164px] grid-cols-[40px_1fr_36px] gap-x-2.5 gap-y-0 px-3 md:pl-4 md:pr-6 py-3 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors cursor-pointer ${stripe}`}
                 >
                   {/* Avatar */}
                   <div className={`${avatarCls} w-10 h-10 self-center`}>{initials(b.name)}</div>
 
-                  {/* Name + dates */}
+                  {/* Name + info */}
                   <div className="min-w-0 self-center">
                     <div className="font-semibold text-sm text-app truncate">{b.name}</div>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1 text-xs text-app-3">
+
+                    {/* Dates + nights + persons — all viewports */}
+                    <div className="flex items-center gap-1.5 mt-0.5 text-xs text-app-3 flex-wrap">
                       <span className="font-semibold text-app-2">{dayjs(b.checkin).format('DD.MM.YY')}</span>
                       <FontAwesomeIcon icon={faArrowRight} className="text-[9px]" />
                       <span className="font-semibold text-app-2">{dayjs(b.checkout).format('DD.MM.YY')}</span>
@@ -263,11 +276,31 @@ export default function BookingList({ bookings, onRefresh }) {
                         </span>
                       )}
                     </div>
-                    {/* Mobile-only: source + amount */}
-                    <div className="md:hidden flex items-center justify-between mt-2">
+
+                    {/* Mobile-only: source · status · amount — single horizontal row */}
+                    <div className="md:hidden flex items-center gap-1.5 mt-1.5 flex-wrap">
                       <span className={sourceCls}>{srcLabel}</span>
-                      <span className="font-bold text-sm">{fmtEur(b.amount)}</span>
+                      <span className={STATUS_CLASS[b.status]}>{t.status[b.status]}</span>
+                      <span className="ml-auto font-bold text-sm text-app">{fmtEur(b.amount)}</span>
                     </div>
+                    {b.status === 'partial' && b.paid_amount != null && (
+                      <div className="md:hidden text-[10px] text-orange-500 font-semibold mt-0.5 text-right">
+                        {fmtEur(b.paid_amount)} платено · {fmtEur(b.amount - b.paid_amount)} оставащо
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Mobile-only: open-modal button */}
+                  <div
+                    className="md:hidden self-center flex items-center justify-center"
+                    onClick={e => { e.stopPropagation(); openView(b); }}
+                  >
+                    <button
+                      className="w-9 h-9 rounded-xl surface-2 border border-app flex items-center justify-center text-app-3 hover:text-primary-500 hover:border-primary-500 active:scale-95 transition-all"
+                      aria-label="Детайли"
+                    >
+                      <FontAwesomeIcon icon={faChevronRight} className="text-xs" />
+                    </button>
                   </div>
 
                   {/* Desktop: Platform */}
@@ -300,6 +333,7 @@ export default function BookingList({ bookings, onRefresh }) {
                       <ConfirmCell
                         action={confirm.action}
                         t={t}
+                        saving={saving}
                         onConfirm={e => executeConfirm(b, e)}
                         onDismiss={dismissConfirm}
                       />
