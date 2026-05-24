@@ -10,12 +10,12 @@ const translations = {
     /* Tabs */
     tabs: { calendar: 'Календар', bookings: 'Резервации', new: 'Нова', revenue: 'Приходи', expenses: 'Разходи' },
     /* Filters */
-    filters: { all: 'Всички', paid: 'Платени', pending: 'Очакват', cancelled: 'Отменени' },
+    filters: { all: 'Всички', paid: 'Платени', pending: 'Очакват', partial: 'Частични', cancelled: 'Отменени' },
     /* Status */
-    status:     { paid: 'Платено',        pending: 'Очаква',          cancelled: 'Отменена' },
-    statusLong: { paid: 'Платено',        pending: 'Очаква плащане',  cancelled: 'Отменена' },
+    status:     { paid: 'Платено',  pending: 'Очаква',         partial: 'Частично',         cancelled: 'Отменена' },
+    statusLong: { paid: 'Платено',  pending: 'Очаква плащане', partial: 'Частично платено', cancelled: 'Отменена' },
     /* Sources */
-    sources: { 'Директна': 'Директна', 'Airbnb': 'Airbnb', 'Booking.com': 'Booking.com', 'Друго': 'Друго' },
+    sources: { 'Директна': 'Директна', 'Airbnb': 'Airbnb', 'Booking.com': 'Booking.com', 'OLX': 'OLX', 'Facebook': 'Facebook', 'Друго': 'Друго' },
     /* Dates */
     months: ['Януари','Февруари','Март','Април','Май','Юни','Юли','Август','Септември','Октомври','Ноември','Декември'],
     dow: ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'],
@@ -53,7 +53,12 @@ const translations = {
     phNotes:           'Допълнителна информация...',
     phAmount:          '0',
     optPending:        'Очаква плащане',
+    optPartial:        'Частично платено',
     optPaid:           'Платено',
+    fldPaidAmount:     'Платено досега (€)',
+    lblPaidAmount:     'Платено',
+    lblRemaining:      'Оставащо',
+    errPaidAmount:     'Сумата трябва да е между 0 и общата сума',
     optDirect:         'Директна',
     optOther:          'Друго',
     fldNightRate:      'Цена на нощ (€)',
@@ -135,6 +140,17 @@ const translations = {
     authCheckEmail:     'Провери имейла си',
     authCheckEmailMsg:  (email) => `Изпратихме потвърждение на ${email}. Натисни линка в имейла за да активираш акаунта.`,
     authCheckEmailBack: '← Назад към вход',
+    authForgotPassword:     'Забравена парола?',
+    authForgotTitle:        'Нулиране на парола',
+    authForgotSubtitle:     'Въведи имейла си и ще ти изпратим линк за нулиране',
+    authForgotBtn:          'Изпрати линк',
+    authForgotSentTitle:    'Провери имейла си',
+    authForgotSentMsg:      (email) => `Изпратихме линк за нулиране на ${email}.`,
+    authForgotBack:         '← Назад към вход',
+    authNewPassword:        'Нова парола',
+    authConfirmNewPassword: 'Потвърди новата парола',
+    authResetBtn:           'Запази новата парола',
+    authResetSuccess:       'Паролата е сменена успешно!',
     /* Onboarding */
     onboardTitle:    'Добре дошли!',
     onboardSubtitle: 'Добавете първия си имот за да започнете',
@@ -188,10 +204,10 @@ const translations = {
   en: {
     appTitle: 'Apartment Manager',
     tabs: { calendar: 'Calendar', bookings: 'Bookings', new: 'New', revenue: 'Revenue', expenses: 'Expenses' },
-    filters: { all: 'All', paid: 'Paid', pending: 'Pending', cancelled: 'Cancelled' },
-    status:     { paid: 'Paid',    pending: 'Pending',           cancelled: 'Cancelled' },
-    statusLong: { paid: 'Paid',    pending: 'Awaiting payment',  cancelled: 'Cancelled' },
-    sources: { 'Директна': 'Direct', 'Airbnb': 'Airbnb', 'Booking.com': 'Booking.com', 'Друго': 'Other' },
+    filters: { all: 'All', paid: 'Paid', pending: 'Pending', partial: 'Partial', cancelled: 'Cancelled' },
+    status:     { paid: 'Paid',  pending: 'Pending',          partial: 'Partial',          cancelled: 'Cancelled' },
+    statusLong: { paid: 'Paid',  pending: 'Awaiting payment', partial: 'Partially paid',   cancelled: 'Cancelled' },
+    sources: { 'Директна': 'Direct', 'Airbnb': 'Airbnb', 'Booking.com': 'Booking.com', 'OLX': 'OLX', 'Facebook': 'Facebook', 'Друго': 'Other' },
     months: ['January','February','March','April','May','June','July','August','September','October','November','December'],
     dow: ['Mo','Tu','We','Th','Fr','Sa','Su'],
     searchPlaceholder: 'Search by name...',
@@ -226,7 +242,12 @@ const translations = {
     phNotes:           'Additional information...',
     phAmount:          '0',
     optPending:        'Awaiting payment',
+    optPartial:        'Partially paid',
     optPaid:           'Paid',
+    fldPaidAmount:     'Paid so far (€)',
+    lblPaidAmount:     'Paid',
+    lblRemaining:      'Remaining',
+    errPaidAmount:     'Amount must be between 0 and the total',
     optDirect:         'Direct',
     optOther:          'Other',
     fldNightRate:      'Night rate (€)',
@@ -305,6 +326,17 @@ const translations = {
     authCheckEmail:     'Check your email',
     authCheckEmailMsg:  (email) => `We sent a confirmation link to ${email}. Click it to activate your account.`,
     authCheckEmailBack: '← Back to sign in',
+    authForgotPassword:     'Forgot password?',
+    authForgotTitle:        'Reset password',
+    authForgotSubtitle:     'Enter your email and we\'ll send you a reset link',
+    authForgotBtn:          'Send reset link',
+    authForgotSentTitle:    'Check your email',
+    authForgotSentMsg:      (email) => `We sent a reset link to ${email}.`,
+    authForgotBack:         '← Back to sign in',
+    authNewPassword:        'New password',
+    authConfirmNewPassword: 'Confirm new password',
+    authResetBtn:           'Save new password',
+    authResetSuccess:       'Password changed successfully!',
     /* Onboarding */
     onboardTitle:    'Welcome!',
     onboardSubtitle: 'Add your first property to get started',
@@ -359,11 +391,20 @@ const translations = {
 const LanguageContext = createContext();
 
 export function LanguageProvider({ children }) {
-  const [lang, setLang] = useState(() => localStorage.getItem('lang') || 'bg');
+  const [lang, setLang] = useState(() => {
+    // Migration: if the user never explicitly picked a language (old default was 'bg'),
+    // reset to 'en'. We track explicit picks with 'lang-set'.
+    if (!localStorage.getItem('lang-set')) {
+      localStorage.removeItem('lang');
+      return 'en';
+    }
+    return localStorage.getItem('lang') || 'en';
+  });
 
   function toggleLang() {
     const next = lang === 'bg' ? 'en' : 'bg';
     localStorage.setItem('lang', next);
+    localStorage.setItem('lang-set', '1');
     setLang(next);
   }
 

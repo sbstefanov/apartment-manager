@@ -31,11 +31,13 @@ module.exports = {
         pop:   '0 24px 48px rgba(0,0,0,0.14), 0 8px 16px rgba(0,0,0,0.06)',
       },
       animation: {
-        'fade-in':  'fadeIn 0.2s ease-out',
-        'slide-up': 'slideUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
-        'sheet-in': 'sheetIn 0.28s cubic-bezier(0.32, 0.72, 0, 1)',
-        'pop-in':   'popIn 0.18s ease-out',
-        'shimmer':  'shimmer 1.6s ease-in-out infinite',
+        'fade-in':        'fadeIn 0.2s ease-out',
+        'slide-up':       'slideUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        'sheet-in':       'sheetIn 0.28s cubic-bezier(0.32, 0.72, 0, 1)',
+        'pop-in':         'popIn 0.18s ease-out',
+        'shimmer':        'shimmer 1.6s ease-in-out infinite',
+        'slide-from-right': 'slideFromRight 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+        'slide-from-left':  'slideFromLeft  0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
       },
       keyframes: {
         fadeIn:  { from: { opacity: 0 }, to: { opacity: 1 } },
@@ -54,6 +56,14 @@ module.exports = {
         shimmer: {
           '0%, 100%': { opacity: 0.5 },
           '50%':      { opacity: 1 },
+        },
+        slideFromRight: {
+          '0%':   { opacity: 0, transform: 'translateX(28px)' },
+          '100%': { opacity: 1, transform: 'translateX(0)' },
+        },
+        slideFromLeft: {
+          '0%':   { opacity: 0, transform: 'translateX(-28px)' },
+          '100%': { opacity: 1, transform: 'translateX(0)' },
         },
       },
     },

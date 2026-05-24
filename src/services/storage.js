@@ -24,6 +24,7 @@ export async function saveBooking(booking) {
     checkout:     booking.checkout,
     persons:      Number(booking.persons),
     amount:       Number(booking.amount),
+    paid_amount:  booking.paid_amount != null ? Number(booking.paid_amount) : null,
     status:       booking.status,
     source:       booking.source,
     notes:        booking.notes        || null,

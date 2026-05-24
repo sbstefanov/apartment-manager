@@ -10,12 +10,12 @@ import DateRangePicker from './DateRangePicker';
 import { saveBooking, deleteBooking } from '../services/storage';
 import { useLanguage, fmtEur } from '../context/LanguageContext';
 
-const FILTER_IDS = ['all', 'paid', 'pending', 'cancelled'];
+const FILTER_IDS = ['all', 'paid', 'partial', 'pending', 'cancelled'];
 
 
-const STATUS_CLASS = { paid: 'badge badge-paid', pending: 'badge badge-pending', cancelled: 'badge badge-cancelled' };
-const SOURCE_CHIP  = { 'Директна': 'chip chip-direct', 'Airbnb': 'chip chip-airbnb', 'Booking.com': 'chip chip-booking', 'Друго': 'chip chip-other' };
-const AVATAR_CLASS = { 'Директна': 'avatar avatar-direct', 'Airbnb': 'avatar avatar-airbnb', 'Booking.com': 'avatar avatar-booking', 'Друго': 'avatar avatar-other' };
+const STATUS_CLASS = { paid: 'badge badge-paid', pending: 'badge badge-pending', partial: 'badge badge-partial', cancelled: 'badge badge-cancelled' };
+const SOURCE_CHIP  = { 'Директна': 'chip chip-direct', 'Airbnb': 'chip chip-airbnb', 'Booking.com': 'chip chip-booking', 'OLX': 'chip chip-olx', 'Facebook': 'chip chip-facebook', 'Друго': 'chip chip-other' };
+const AVATAR_CLASS = { 'Директна': 'avatar avatar-direct', 'Airbnb': 'avatar avatar-airbnb', 'Booking.com': 'avatar avatar-booking', 'OLX': 'avatar avatar-olx', 'Facebook': 'avatar avatar-facebook', 'Друго': 'avatar avatar-other' };
 
 function initials(name) {
   const p = name.trim().split(' ');
@@ -99,6 +99,7 @@ export default function BookingList({ bookings, onRefresh }) {
   const counts = {
     all:       bookings.length,
     paid:      bookings.filter(b => b.status === 'paid').length,
+    partial:   bookings.filter(b => b.status === 'partial').length,
     pending:   bookings.filter(b => b.status === 'pending').length,
     cancelled: bookings.filter(b => b.status === 'cancelled').length,
   };
@@ -224,6 +225,7 @@ export default function BookingList({ bookings, onRefresh }) {
               const srcLabel  = t.sources[b.source]    || b.source;
               const stripe = b.status === 'paid'      ? 'border-l-[3px] border-emerald-500' :
                              b.status === 'pending'   ? 'border-l-[3px] border-amber-500' :
+                             b.status === 'partial'   ? 'border-l-[3px] border-orange-500' :
                              b.status === 'cancelled' ? 'border-l-[3px] border-rose-500 opacity-60' : '';
 
               const isConfirming = confirm?.id === b.id;
@@ -274,8 +276,13 @@ export default function BookingList({ bookings, onRefresh }) {
                   </div>
 
                   {/* Desktop: Amount */}
-                  <div className="hidden md:flex items-center self-center font-bold text-sm">
-                    {fmtEur(b.amount)}
+                  <div className="hidden md:flex flex-col justify-center self-center">
+                    <span className="font-bold text-sm">{fmtEur(b.amount)}</span>
+                    {b.status === 'partial' && b.paid_amount != null && (
+                      <span className="text-[10px] text-orange-500 font-semibold">
+                        {fmtEur(b.paid_amount)} / {fmtEur(b.amount - b.paid_amount)}
+                      </span>
+                    )}
                   </div>
 
                   {/* Desktop: Status */}

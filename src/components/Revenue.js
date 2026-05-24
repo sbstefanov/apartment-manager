@@ -7,11 +7,13 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { useLanguage, fmtEur } from '../context/LanguageContext';
 
-const PLATFORMS = ['Директна', 'Airbnb', 'Booking.com', 'Друго'];
+const PLATFORMS = ['Директна', 'Airbnb', 'Booking.com', 'OLX', 'Facebook', 'Друго'];
 const PLATFORM_BAR = {
   'Директна':    'bg-direct',
   'Airbnb':      'bg-airbnb',
   'Booking.com': 'bg-booking',
+  'OLX':         'bg-violet-500',
+  'Facebook':    'bg-sky-500',
   'Друго':       'bg-slate-400',
 };
 
@@ -38,16 +40,21 @@ export default function Revenue({ bookings, expenses = [] }) {
 
   const active  = filtered.filter(b => b.status !== 'cancelled');
   const paid    = filtered.filter(b => b.status === 'paid');
+  const partial = filtered.filter(b => b.status === 'partial');
   const pending = filtered.filter(b => b.status === 'pending');
 
-  const totalRevenue  = active.reduce((s, b) => s + b.amount, 0);
-  const totalPaid     = paid.reduce((s, b) => s + b.amount, 0);
-  const totalPending  = pending.reduce((s, b) => s + b.amount, 0);
-  const totalExpenses = expFiltered.reduce((s, e) => s + Number(e.amount), 0);
-  const netProfit     = totalRevenue - totalExpenses;
+  const totalRevenue      = active.reduce((s, b) => s + b.amount, 0);
+  const totalPaid         = paid.reduce((s, b) => s + b.amount, 0);
+  const partialCollected  = partial.reduce((s, b) => s + (Number(b.paid_amount) || 0), 0);
+  const partialRemaining  = partial.reduce((s, b) => s + (b.amount - (Number(b.paid_amount) || 0)), 0);
+  const totalCollected    = totalPaid + partialCollected;
+  const totalPending      = pending.reduce((s, b) => s + b.amount, 0) + partialRemaining;
+  const totalExpenses     = expFiltered.reduce((s, e) => s + Number(e.amount), 0);
+  const netProfit         = totalRevenue - totalExpenses;
 
-  const paidPct    = totalRevenue > 0 ? (totalPaid    / totalRevenue) * 100 : 0;
-  const pendingPct = totalRevenue > 0 ? (totalPending / totalRevenue) * 100 : 0;
+  const collectedPct = totalRevenue > 0 ? (totalCollected / totalRevenue) * 100 : 0;
+  const pendingPct   = totalRevenue > 0 ? (totalPending   / totalRevenue) * 100 : 0;
+  const partialPct   = totalRevenue > 0 ? (partialCollected / totalRevenue) * 100 : 0;
 
   const allActive = bookings.filter(b => b.status !== 'cancelled');
   const nightsThisYear = allActive
@@ -102,10 +109,10 @@ export default function Revenue({ bookings, expenses = [] }) {
           label={t.statTotal} value={fmtEur(totalRevenue)} sub={t.statActive(active.length)} />
         <StatCard
           icon={faCircleCheck} bg="bg-emerald-50 dark:bg-emerald-900/30" iconColor="text-emerald-500"
-          label={t.statPaid} value={fmtEur(totalPaid)} sub={t.statPaidCount(paid.length)} />
+          label={t.statPaid} value={fmtEur(totalCollected)} sub={t.statPaidCount(paid.length + partial.length)} />
         <StatCard
           icon={faClock} bg="bg-amber-50 dark:bg-amber-900/30" iconColor="text-amber-500"
-          label={t.statPending} value={fmtEur(totalPending)} sub={t.statPaidCount(pending.length)} />
+          label={t.statPending} value={fmtEur(totalPending)} sub={t.statPaidCount(pending.length + partial.length)} />
       </div>
 
       {/* Expense + Net profit cards */}
@@ -146,16 +153,22 @@ export default function Revenue({ bookings, expenses = [] }) {
         <div className="card p-4 md:p-5">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-semibold text-app-2">{t.collected}</span>
-            <span className="text-sm font-bold">{t.pctPaid(paidPct)}</span>
+            <span className="text-sm font-bold">{t.pctPaid(collectedPct)}</span>
           </div>
           <div className="h-2.5 surface-2 rounded-full overflow-hidden flex">
-            <div className="bg-primary-500 transition-all duration-500" style={{ width: `${paidPct}%` }} />
+            <div className="bg-primary-500 transition-all duration-500" style={{ width: `${collectedPct - partialPct}%` }} />
+            <div className="bg-orange-400 transition-all duration-500" style={{ width: `${partialPct}%` }} />
             <div className="bg-amber-500 transition-all duration-500" style={{ width: `${pendingPct}%` }} />
           </div>
-          <div className="flex gap-4 mt-3 text-xs text-app-3">
+          <div className="flex gap-4 mt-3 text-xs text-app-3 flex-wrap">
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-primary-500" />{t.statPaid}
             </span>
+            {partial.length > 0 && (
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-orange-400" />{t.status.partial}
+              </span>
+            )}
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-amber-500" />{t.statPending}
             </span>

@@ -11,7 +11,7 @@ import { useApartment } from '../context/ApartmentContext';
 const EMPTY = {
   name: '', phone: '', email: '', persons: 2,
   checkin: '', checkout: '', amount: '', nightRate: '',
-  status: 'pending', source: 'Директна', notes: '', apartment_id: null,
+  status: 'pending', paid_amount: '', source: 'Директна', notes: '', apartment_id: null,
 };
 
 function Field({ label, error, icon, children, full }) {
@@ -69,6 +69,10 @@ export default function BookingForm({ bookings, onRefresh, onNavigate, initial =
     if (!form.checkout)    e.checkout = t.errRequired;
     if (form.checkin && form.checkout && form.checkout <= form.checkin) e.checkout = t.errCheckout;
     if (!form.amount || Number(form.amount) <= 0) e.amount = t.errAmount;
+    if (form.status === 'partial') {
+      const pa = Number(form.paid_amount);
+      if (!form.paid_amount || pa <= 0 || pa >= Number(form.amount)) e.paid_amount = t.errPaidAmount;
+    }
     return e;
   }
 
@@ -93,6 +97,7 @@ export default function BookingForm({ bookings, onRefresh, onNavigate, initial =
       ...formData,
       persons:      Number(formData.persons),
       amount:       Number(formData.amount),
+      paid_amount:  formData.status === 'partial' ? Number(formData.paid_amount) : null,
       apartment_id: formData.apartment_id || null,
     });
     await onRefresh();
@@ -178,14 +183,37 @@ export default function BookingForm({ bookings, onRefresh, onNavigate, initial =
           <Field label={t.fldStatus} full>
             <select className="input" value={form.status} onChange={e => set('status', e.target.value)}>
               <option value="pending">{t.optPending}</option>
+              <option value="partial">{t.optPartial}</option>
               <option value="paid">{t.optPaid}</option>
             </select>
           </Field>
+
+          {form.status === 'partial' && (
+            <div className="col-span-2 space-y-2">
+              <Field label={t.fldPaidAmount} error={errors.paid_amount} icon={faCoins}>
+                <input
+                  className={inputCls(errors.paid_amount)}
+                  type="number" min="0" step="0.01"
+                  value={form.paid_amount}
+                  onChange={e => set('paid_amount', e.target.value)}
+                  placeholder="0"
+                />
+              </Field>
+              {form.paid_amount && form.amount && Number(form.paid_amount) > 0 && Number(form.paid_amount) < Number(form.amount) && (
+                <div className="flex items-center justify-between bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 text-xs font-semibold py-2 px-3 rounded-lg">
+                  <span>{t.lblPaidAmount}: {Number(form.paid_amount)} €</span>
+                  <span>{t.lblRemaining}: {Number(form.amount) - Number(form.paid_amount)} €</span>
+                </div>
+              )}
+            </div>
+          )}
           <Field label={t.fldPlatform} icon={faTag} full>
             <select className="input pl-10" value={form.source} onChange={e => set('source', e.target.value)}>
               <option value="Директна">{t.optDirect}</option>
               <option value="Airbnb">Airbnb</option>
               <option value="Booking.com">Booking.com</option>
+              <option value="OLX">OLX</option>
+              <option value="Facebook">Facebook</option>
               <option value="Друго">{t.optOther}</option>
             </select>
           </Field>

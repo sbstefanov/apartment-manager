@@ -9,6 +9,8 @@ const SOURCE_PILL = {
   'Airbnb':      'bg-airbnb text-white',
   'Booking.com': 'bg-booking text-white',
   'Директна':    'bg-direct text-white',
+  'OLX':         'bg-violet-500 text-white',
+  'Facebook':    'bg-sky-500 text-white',
   'Друго':       'bg-slate-500 text-white',
 };
 
@@ -16,6 +18,8 @@ const SOURCE_CELL = {
   'Airbnb':      'cal-cell-airbnb',
   'Booking.com': 'cal-cell-booking',
   'Директна':    'cal-cell-direct',
+  'OLX':         'cal-cell-olx',
+  'Facebook':    'cal-cell-facebook',
   'Друго':       'cal-cell-other',
 };
 
@@ -246,10 +250,12 @@ export default function Calendar({ bookings, onRefresh }) {
 
       {/* Platform legend */}
       <div className="flex flex-wrap items-center justify-center gap-3 text-[11px] text-app-2 pt-2">
-        <LegendDot color="bg-direct"    label={t.calLegDirect} />
-        <LegendDot color="bg-airbnb"    label="Airbnb" />
-        <LegendDot color="bg-booking"   label="Booking.com" />
-        <LegendDot color="bg-slate-500" label={t.calLegOther} />
+        <LegendDot color="bg-direct"       label={t.calLegDirect} />
+        <LegendDot color="bg-airbnb"       label="Airbnb" />
+        <LegendDot color="bg-booking"      label="Booking.com" />
+        <LegendDot color="bg-violet-500"   label="OLX" />
+        <LegendDot color="bg-sky-500"      label="Facebook" />
+        <LegendDot color="bg-slate-500"    label={t.calLegOther} />
       </div>
 
       {selected && (

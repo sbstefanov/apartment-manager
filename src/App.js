@@ -11,7 +11,7 @@ import BookingList from './components/BookingList';
 import BookingForm from './components/BookingForm';
 import Revenue from './components/Revenue';
 import Expenses from './components/Expenses';
-import AuthForm from './components/AuthForm';
+import AuthForm, { ResetPasswordScreen } from './components/AuthForm';
 import ApartmentManager from './components/ApartmentManager';
 import Onboarding from './components/Onboarding';
 import { getBookings, getExpenses } from './services/storage';
@@ -61,6 +61,7 @@ function LangPicker() {
 
   function pick(code) {
     localStorage.setItem('lang', code);
+    localStorage.setItem('lang-set', '1');
     setLang(code);
     setOpen(false);
   }
@@ -434,7 +435,8 @@ function LoadingState() {
 
 /* ─── Auth gate ─────────────────────────────────────────────────── */
 function AppGate() {
-  const { user, loading } = useAuth();
+  const { user, loading, recoveryMode, clearRecoveryMode } = useAuth();
+  const { t } = useLanguage();
 
   if (loading) {
     return (
@@ -442,6 +444,11 @@ function AppGate() {
         <div className="w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin" />
       </div>
     );
+  }
+
+  // Password recovery flow — user clicked the reset link in email
+  if (recoveryMode) {
+    return <ResetPasswordScreen onDone={clearRecoveryMode} t={t} />;
   }
 
   return user ? <AppInner /> : <AuthForm />;

@@ -13,6 +13,7 @@ function nights(checkin, checkout) {
 const STATUS_CLASS = {
   paid:      'badge badge-paid',
   pending:   'badge badge-pending',
+  partial:   'badge badge-partial',
   cancelled: 'badge badge-cancelled',
 };
 
@@ -72,8 +73,8 @@ export default function BookingModal({ booking, bookings = [], onClose, onRefres
   function handleOverlay(e) { if (e.target === e.currentTarget) onClose(); }
 
   const n = nights(booking.checkin, booking.checkout);
-  const isPending   = booking.status === 'pending';
-  const isActive    = booking.status === 'paid' || booking.status === 'pending';
+  const isPending   = booking.status === 'pending' || booking.status === 'partial';
+  const isActive    = booking.status === 'paid' || booking.status === 'pending' || booking.status === 'partial';
   const isCancelled = booking.status === 'cancelled';
 
   return (
@@ -111,6 +112,12 @@ export default function BookingModal({ booking, bookings = [], onClose, onRefres
                 <Row label={t.lblNights}   value={n} />
                 <Row label={t.lblPersons}  value={booking.persons} />
                 <Row label={t.lblAmount}   value={fmtEur(booking.amount)} highlight />
+                {booking.status === 'partial' && booking.paid_amount != null && (
+                  <>
+                    <Row label={t.lblPaidAmount} value={fmtEur(booking.paid_amount)} valueColor="text-orange-500" />
+                    <Row label={t.lblRemaining}  value={fmtEur(booking.amount - booking.paid_amount)} valueColor="text-amber-500" />
+                  </>
+                )}
                 <Row label={t.lblSource}   value={t.sources[booking.source] || booking.source} />
               </div>
               {booking.notes && (
@@ -202,11 +209,11 @@ function ModalHeader({ name, initial, status, onClose }) {
   );
 }
 
-function Row({ label, value, highlight }) {
+function Row({ label, value, highlight, valueColor }) {
   return (
     <div>
       <div className="text-[11px] font-bold uppercase tracking-wider text-app-3 mb-1">{label}</div>
-      <div className={`text-sm break-words ${highlight ? 'font-bold text-base text-primary-500' : 'text-app'}`}>
+      <div className={`text-sm break-words ${highlight ? 'font-bold text-base text-primary-500' : valueColor || 'text-app'}`}>
         {value}
       </div>
     </div>

@@ -87,30 +87,38 @@
   }
   .badge-paid      { @apply bg-emerald-100 text-emerald-800; }
   .badge-pending   { @apply bg-amber-100   text-amber-800; }
+  .badge-partial   { @apply bg-orange-100  text-orange-800; }
   .badge-cancelled { @apply bg-red-100     text-red-800; }
   [data-theme="dark"] .badge-paid      { @apply bg-emerald-900/40 text-emerald-300; }
   [data-theme="dark"] .badge-pending   { @apply bg-amber-900/40   text-amber-300; }
+  [data-theme="dark"] .badge-partial   { @apply bg-orange-900/40  text-orange-300; }
   [data-theme="dark"] .badge-cancelled { @apply bg-red-900/40     text-red-300; }
 
   /* Source chips */
-  .chip-direct  { @apply bg-direct-light  text-direct  border border-direct/20; }
-  .chip-airbnb  { @apply bg-airbnb-light  text-airbnb  border border-airbnb/20; }
-  .chip-booking { @apply bg-booking-light text-booking border border-booking/20; }
-  .chip-other   { @apply bg-slate-100 text-slate-600 border border-slate-200; }
-  [data-theme="dark"] .chip-direct  { @apply bg-emerald-900/30 text-emerald-300 border-emerald-700/40; }
-  [data-theme="dark"] .chip-airbnb  { @apply bg-rose-900/30    text-rose-300    border-rose-700/40; }
-  [data-theme="dark"] .chip-booking { @apply bg-blue-900/40    text-blue-300    border-blue-700/40; }
-  [data-theme="dark"] .chip-other   { @apply bg-slate-800      text-slate-400   border-slate-700; }
+  .chip-direct   { @apply bg-direct-light  text-direct  border border-direct/20; }
+  .chip-airbnb   { @apply bg-airbnb-light  text-airbnb  border border-airbnb/20; }
+  .chip-booking  { @apply bg-booking-light text-booking border border-booking/20; }
+  .chip-olx      { @apply bg-violet-100 text-violet-700 border border-violet-200; }
+  .chip-facebook { @apply bg-sky-100    text-sky-700    border border-sky-200; }
+  .chip-other    { @apply bg-slate-100  text-slate-600  border border-slate-200; }
+  [data-theme="dark"] .chip-direct   { @apply bg-emerald-900/30 text-emerald-300 border-emerald-700/40; }
+  [data-theme="dark"] .chip-airbnb   { @apply bg-rose-900/30    text-rose-300    border-rose-700/40; }
+  [data-theme="dark"] .chip-booking  { @apply bg-blue-900/40    text-blue-300    border-blue-700/40; }
+  [data-theme="dark"] .chip-olx      { @apply bg-violet-900/40  text-violet-300  border-violet-700/40; }
+  [data-theme="dark"] .chip-facebook { @apply bg-sky-900/40     text-sky-300     border-sky-700/40; }
+  [data-theme="dark"] .chip-other    { @apply bg-slate-800      text-slate-400   border-slate-700; }
   .chip {
     @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold whitespace-nowrap;
   }
 
   /* Avatar gradients */
   .avatar { @apply flex items-center justify-center rounded-full text-white font-bold text-xs flex-shrink-0; }
-  .avatar-direct  { background: linear-gradient(135deg, #10B981, #059669); }
-  .avatar-airbnb  { background: linear-gradient(135deg, #FF385C, #E61E4D); }
-  .avatar-booking { background: linear-gradient(135deg, #2563EB, #003580); }
-  .avatar-other   { background: linear-gradient(135deg, #94A3B8, #64748B); }
+  .avatar-direct   { background: linear-gradient(135deg, #10B981, #059669); }
+  .avatar-airbnb   { background: linear-gradient(135deg, #FF385C, #E61E4D); }
+  .avatar-booking  { background: linear-gradient(135deg, #2563EB, #003580); }
+  .avatar-olx      { background: linear-gradient(135deg, #8B5CF6, #6D28D9); }
+  .avatar-facebook { background: linear-gradient(135deg, #38BDF8, #0EA5E9); }
+  .avatar-other    { background: linear-gradient(135deg, #94A3B8, #64748B); }
 
   /* Calendar booked cell — half-day diagonal split */
   .turnover-bg {
@@ -127,13 +135,17 @@
   }
 
   /* Calendar source-cell colors */
-  .cal-cell-airbnb  { @apply bg-airbnb-light  border-l-[3px] border-airbnb; }
-  .cal-cell-booking { @apply bg-booking-light border-l-[3px] border-booking; }
-  .cal-cell-direct  { @apply bg-direct-light  border-l-[3px] border-direct; }
-  .cal-cell-other   { @apply bg-slate-100 border-l-[3px] border-slate-400; }
-  [data-theme="dark"] .cal-cell-airbnb  { background: rgba(255,56,92,0.10);  }
-  [data-theme="dark"] .cal-cell-booking { background: rgba(0,53,128,0.20);   }
-  [data-theme="dark"] .cal-cell-direct  { background: rgba(5,150,105,0.15);  }
+  .cal-cell-airbnb   { @apply bg-airbnb-light  border-l-[3px] border-airbnb; }
+  .cal-cell-booking  { @apply bg-booking-light border-l-[3px] border-booking; }
+  .cal-cell-direct   { @apply bg-direct-light  border-l-[3px] border-direct; }
+  .cal-cell-olx      { @apply bg-violet-50 border-l-[3px] border-violet-500; }
+  .cal-cell-facebook { @apply bg-sky-50    border-l-[3px] border-sky-500; }
+  .cal-cell-other    { @apply bg-slate-100  border-l-[3px] border-slate-400; }
+  [data-theme="dark"] .cal-cell-airbnb   { background: rgba(255,56,92,0.10);   }
+  [data-theme="dark"] .cal-cell-booking  { background: rgba(0,53,128,0.20);    }
+  [data-theme="dark"] .cal-cell-direct   { background: rgba(5,150,105,0.15);   }
+  [data-theme="dark"] .cal-cell-olx      { background: rgba(139,92,246,0.15);  }
+  [data-theme="dark"] .cal-cell-facebook { background: rgba(14,165,233,0.15);  }
   [data-theme="dark"] .cal-cell-other   { background: rgba(148,163,184,0.10);}
 
   /* Skeleton */
