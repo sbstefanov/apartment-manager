@@ -152,6 +152,9 @@ const translations = {
     authConfirmNewPassword: 'Потвърди новата парола',
     authResetBtn:           'Запази новата парола',
     authResetSuccess:       'Паролата е сменена успешно!',
+    authLinkExpiredTitle:   'Линкът е изтекъл',
+    authLinkExpiredMsg:     'Линкът за нулиране на паролата е изтекъл или вече е използван. Моля поискай нов.',
+    authLinkExpiredBtn:     'Към вход',
     /* Onboarding */
     onboardTitle:    'Добре дошли!',
     onboardSubtitle: 'Добавете първия си имот за да започнете',
@@ -340,6 +343,9 @@ const translations = {
     authConfirmNewPassword: 'Confirm new password',
     authResetBtn:           'Save new password',
     authResetSuccess:       'Password changed successfully!',
+    authLinkExpiredTitle:   'Link expired',
+    authLinkExpiredMsg:     'The password reset link has expired or has already been used. Please request a new one.',
+    authLinkExpiredBtn:     'Back to login',
     /* Onboarding */
     onboardTitle:    'Welcome!',
     onboardSubtitle: 'Add your first property to get started',

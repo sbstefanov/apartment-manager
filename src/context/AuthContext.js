@@ -15,18 +15,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    // ── 1. Detect recovery token in URL (implicit flow) ───────────────
-    // Supabase appends #access_token=...&type=recovery to the redirect URL
-    const hashStr = window.location.hash.slice(1); // remove leading #
-    const hashParams = new URLSearchParams(hashStr);
-    if (hashParams.get('type') === 'recovery') {
-      recoveryRef.current = true;
-      setRecoveryMode(true);
-      // Clean up URL so refresh/back don't re-trigger
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-
-    // ── 2. Subscribe to auth changes ──────────────────────────────────
+    // ── 1. Subscribe to auth changes ──────────────────────────────────
     // Only PASSWORD_RECOVERY sets recovery mode.
     // Only SIGNED_OUT clears it — all other events (SIGNED_IN, INITIAL_SESSION,
     // TOKEN_REFRESHED, USER_UPDATED) leave it untouched once set.

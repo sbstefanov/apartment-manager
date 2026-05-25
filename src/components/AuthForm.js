@@ -1,13 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHouse, faEnvelope, faLock, faSpinner, faUser, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
 
+/* ─── Language toggle button ─────────────────────────────────────── */
+function LangToggle() {
+  const { lang, toggleLang } = useLanguage();
+  return (
+    <button
+      onClick={toggleLang}
+      className="absolute top-4 right-4 flex items-center gap-1.5 bg-white/20 hover:bg-white/30 active:bg-white/40 border border-white/30 text-white text-xs font-bold px-3 py-1.5 rounded-full transition-colors shadow-sm"
+      aria-label="Switch language"
+    >
+      <span className="text-sm leading-none">{lang === 'bg' ? '🇧🇬' : '🇬🇧'}</span>
+      <span>{lang === 'bg' ? 'BG' : 'EN'}</span>
+    </button>
+  );
+}
+
 /* ─── Check-email screen ─────────────────────────────────────────── */
 function CheckEmailScreen({ email, onBack, t }) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 p-4">
+    <div className="relative min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 p-4">
+      <LangToggle />
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center mb-4 shadow-pop">
@@ -45,7 +61,7 @@ function ForgotPasswordScreen({ onBack, t }) {
     setLoading(true);
     try {
       const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin,
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       if (err) setError(err.message);
       else setSent(true);
@@ -55,7 +71,8 @@ function ForgotPasswordScreen({ onBack, t }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 p-4">
+    <div className="relative min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 p-4">
+      <LangToggle />
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center mb-4 shadow-pop">
@@ -113,11 +130,40 @@ function ForgotPasswordScreen({ onBack, t }) {
 
 /* ─── Reset password screen ──────────────────────────────────────── */
 export function ResetPasswordScreen({ onDone, t }) {
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm]   = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState('');
-  const [success, setSuccess]   = useState(false);
+  const [password, setPassword]         = useState('');
+  const [confirm, setConfirm]           = useState('');
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState('');
+  const [success, setSuccess]           = useState(false);
+  const [checking, setChecking]         = useState(true);
+  const [sessionOk, setSessionOk]       = useState(false);
+
+  useEffect(() => {
+    let done = false;
+    function resolve(ok) {
+      if (done) return;
+      done = true;
+      setSessionOk(ok);
+      setChecking(false);
+    }
+
+    // Listen for PASSWORD_RECOVERY or any sign-in event
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') { resolve(true);  return; }
+      if (event === 'SIGNED_IN' && session) { resolve(true); return; }
+      if (event === 'INITIAL_SESSION') { resolve(!!session); return; }
+    });
+
+    // Also try getSession immediately (handles already-set session)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      resolve(!!session);
+    });
+
+    // Fallback — if nothing fires in 4s, mark as expired
+    const t = setTimeout(() => resolve(false), 4000);
+
+    return () => { subscription.unsubscribe(); clearTimeout(t); };
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -125,17 +171,19 @@ export function ResetPasswordScreen({ onDone, t }) {
     if (password !== confirm) { setError(t.authErrConfirmPass); return; }
     setError('');
     setLoading(true);
-    try {
-      const { error: err } = await supabase.auth.updateUser({ password });
-      if (err) setError(err.message);
-      else { setSuccess(true); setTimeout(() => onDone(), 2000); }
-    } finally {
+    const { error: err } = await supabase.auth.updateUser({ password });
+    if (err) {
+      setError(err.message);
       setLoading(false);
+    } else {
+      setSuccess(true);
+      setTimeout(() => onDone(), 2000);
     }
   }
 
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 p-4">
+  const shell = (content) => (
+    <div className="relative min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 p-4">
+      <LangToggle />
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center mb-4 shadow-pop">
@@ -144,44 +192,73 @@ export function ResetPasswordScreen({ onDone, t }) {
           <h1 className="text-white text-2xl font-bold tracking-tight">{t.appTitle}</h1>
           <p className="text-white/70 text-sm mt-1">{t.authForgotTitle}</p>
         </div>
-
-        <div className="surface rounded-2xl shadow-pop p-6 space-y-4">
-          {success ? (
-            <div className="text-center space-y-4 py-2">
-              <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center mx-auto">
-                <FontAwesomeIcon icon={faCheckCircle} className="text-emerald-500 text-2xl" />
-              </div>
-              <p className="text-base font-semibold text-app">{t.authResetSuccess}</p>
-            </div>
-          ) : (
-            <>
-              {error && (
-                <div className="bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-300 text-sm px-4 py-3 rounded-xl">
-                  {error}
-                </div>
-              )}
-              <form onSubmit={handleSubmit} className="space-y-3" noValidate>
-                <div className="relative">
-                  <FontAwesomeIcon icon={faLock} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-app-3 text-sm pointer-events-none" />
-                  <input type="password" placeholder={t.authNewPassword} value={password}
-                    onChange={e => { setPassword(e.target.value); setError(''); }}
-                    className="input pl-10" autoComplete="new-password" autoFocus required />
-                </div>
-                <div className="relative">
-                  <FontAwesomeIcon icon={faLock} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-app-3 text-sm pointer-events-none" />
-                  <input type="password" placeholder={t.authConfirmNewPassword} value={confirm}
-                    onChange={e => { setConfirm(e.target.value); setError(''); }}
-                    className="input pl-10" autoComplete="new-password" required />
-                </div>
-                <button type="submit" disabled={loading} className="btn-primary w-full py-3 text-base mt-1">
-                  {loading ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : t.authResetBtn}
-                </button>
-              </form>
-            </>
-          )}
-        </div>
+        <div className="surface rounded-2xl shadow-pop p-6 space-y-4">{content}</div>
       </div>
     </div>
+  );
+
+  /* Checking session… */
+  if (checking) return shell(
+    <div className="flex justify-center py-4">
+      <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-500 rounded-full animate-spin" />
+    </div>
+  );
+
+  /* No valid recovery session — link expired or direct navigation */
+  if (!sessionOk) return shell(
+    <div className="text-center space-y-4 py-2">
+      <div className="w-14 h-14 rounded-full bg-rose-50 dark:bg-rose-900/30 flex items-center justify-center mx-auto">
+        <FontAwesomeIcon icon={faLock} className="text-rose-400 text-xl" />
+      </div>
+      <div>
+        <h2 className="text-base font-bold text-app">{t.authLinkExpiredTitle}</h2>
+        <p className="text-sm text-app-2 mt-1">{t.authLinkExpiredMsg}</p>
+      </div>
+      <button
+        onClick={onDone}
+        className="btn-primary w-full py-2.5"
+      >
+        {t.authLinkExpiredBtn}
+      </button>
+    </div>
+  );
+
+  /* Success */
+  if (success) return shell(
+    <div className="text-center space-y-4 py-2">
+      <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center mx-auto">
+        <FontAwesomeIcon icon={faCheckCircle} className="text-emerald-500 text-2xl" />
+      </div>
+      <p className="text-base font-semibold text-app">{t.authResetSuccess}</p>
+    </div>
+  );
+
+  /* Reset form */
+  return shell(
+    <>
+      {error && (
+        <div className="bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-300 text-sm px-4 py-3 rounded-xl">
+          {error}
+        </div>
+      )}
+      <form onSubmit={handleSubmit} className="space-y-3" noValidate>
+        <div className="relative">
+          <FontAwesomeIcon icon={faLock} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-app-3 text-sm pointer-events-none" />
+          <input type="password" placeholder={t.authNewPassword} value={password}
+            onChange={e => { setPassword(e.target.value); setError(''); }}
+            className="input pl-10" autoComplete="new-password" autoFocus required />
+        </div>
+        <div className="relative">
+          <FontAwesomeIcon icon={faLock} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-app-3 text-sm pointer-events-none" />
+          <input type="password" placeholder={t.authConfirmNewPassword} value={confirm}
+            onChange={e => { setConfirm(e.target.value); setError(''); }}
+            className="input pl-10" autoComplete="new-password" required />
+        </div>
+        <button type="submit" disabled={loading} className="btn-primary w-full py-3 text-base mt-1">
+          {loading ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : t.authResetBtn}
+        </button>
+      </form>
+    </>
   );
 }
 
@@ -236,7 +313,8 @@ export default function AuthForm() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 p-4">
+    <div className="relative min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 p-4">
+      <LangToggle />
       <div className="w-full max-w-sm">
 
         {/* Logo */}

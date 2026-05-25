@@ -438,17 +438,35 @@ function AppGate() {
   const { user, loading, recoveryMode, clearRecoveryMode } = useAuth();
   const { t } = useLanguage();
 
+  // Dedicated reset-password page — catches the redirect from the email link
+  // regardless of auth event timing. Works before loading completes too.
+  const isResetPath = window.location.pathname === '/reset-password';
+  if (isResetPath || recoveryMode) {
+    if (loading && !isResetPath) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700">
+          <div className="w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+        </div>
+      );
+    }
+    return (
+      <ResetPasswordScreen
+        onDone={async () => {
+          clearRecoveryMode();
+          window.history.replaceState({}, document.title, '/');
+          await supabase.auth.signOut();
+        }}
+        t={t}
+      />
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700">
         <div className="w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin" />
       </div>
     );
-  }
-
-  // Password recovery flow — user clicked the reset link in email
-  if (recoveryMode) {
-    return <ResetPasswordScreen onDone={clearRecoveryMode} t={t} />;
   }
 
   return user ? <AppInner /> : <AuthForm />;
