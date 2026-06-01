@@ -23,8 +23,22 @@ const SOURCE_CELL = {
   'Друго':       'cal-cell-other',
 };
 
+// Light bg + accent colour for the diagonal turnover split (matches cal-cell-* palette)
+const SOURCE_LIGHT = {
+  'Airbnb':      { bg: '#FFF0F3', text: '#FF385C' },
+  'Booking.com': { bg: '#E8EFFF', text: '#2563EB' },
+  'Директна':    { bg: '#ECFDF5', text: '#059669' },
+  'OLX':         { bg: '#F5F3FF', text: '#7C3AED' },
+  'Facebook':    { bg: '#F0F9FF', text: '#0284C7' },
+  'Друго':       { bg: '#F1F5F9', text: '#475569' },
+};
+
 function getBookingsForDay(bookings, dateStr) {
   return bookings.filter(b => b.status !== 'cancelled' && dateStr >= b.checkin && dateStr < b.checkout);
+}
+
+function getCheckoutsForDay(bookings, dateStr) {
+  return bookings.filter(b => b.status !== 'cancelled' && b.checkout === dateStr);
 }
 
 function calcOccupancy(bookings, year, month, daysInMonth) {
@@ -200,13 +214,84 @@ export default function Calendar({ bookings, onRefresh }) {
         {cells.map((day, i) => {
           if (!day) return <div key={`e-${i}`} className="aspect-square" />;
 
-          const col       = i % 7;
+          const col      = i % 7;
           const isWeekend = col >= 5;
-          const dateStr   = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-          const isToday   = dateStr === today.format('YYYY-MM-DD');
-          const dayBkgs   = getBookingsForDay(bookings, dateStr);
-          const hasBkg    = dayBkgs.length > 0;
-          const primary   = hasBkg ? dayBkgs[0].source : undefined;
+          const dateStr  = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          const isToday  = dateStr === today.format('YYYY-MM-DD');
+
+          // Classify each booking's relationship to this day
+          const outBkgs = bookings.filter(b => b.status !== 'cancelled' && b.checkout === dateStr);
+          const inBkgs  = bookings.filter(b => b.status !== 'cancelled' && b.checkin  === dateStr);
+          const midBkgs = bookings.filter(b => b.status !== 'cancelled' && b.checkin < dateStr && dateStr < b.checkout);
+
+          const outBkg = outBkgs[0] || null; // leaving today
+          const inBkg  = inBkgs[0]  || null; // arriving today
+          const midBkg = midBkgs[0] || null; // staying (mid-stay)
+
+          // Show diagonal whenever there is a checkin OR checkout (regardless of direction)
+          const isDiagonal = !!(outBkg || inBkg);
+
+          /* ── Diagonal cell (checkout-only / checkin-only / turnover) ── */
+          if (isDiagonal) {
+            const outTheme = outBkg ? (SOURCE_LIGHT[outBkg.source] || { bg:'#F1F5F9', text:'#475569' }) : null;
+            const inTheme  = inBkg  ? (SOURCE_LIGHT[inBkg.source]  || { bg:'#F1F5F9', text:'#475569' }) : null;
+            const dayNumColor = (outTheme || inTheme)?.text || '#475569';
+
+            return (
+              <div
+                key={dateStr}
+                className={`surface relative aspect-square rounded-lg overflow-hidden border border-app transition-all hover:scale-[1.04] hover:shadow-soft${isToday ? ' ring-2 ring-primary-500 ring-offset-1' : ''}`}
+              >
+                {/* Top-left triangle — departure colour (empty = surface shows through) */}
+                {outTheme && (
+                  <div
+                    style={{ position:'absolute', inset:0, background: outTheme.bg, clipPath:'polygon(0 0,100% 0,0 100%)' }}
+                    className="cursor-pointer"
+                    onClick={() => setSelected(outBkg)}
+                  />
+                )}
+                {/* Bottom-right triangle — arrival colour (empty = surface shows through) */}
+                {inTheme && (
+                  <div
+                    style={{ position:'absolute', inset:0, background: inTheme.bg, clipPath:'polygon(100% 0,100% 100%,0 100%)' }}
+                    className="cursor-pointer"
+                    onClick={() => setSelected(inBkg)}
+                  />
+                )}
+                {/* Diagonal divider */}
+                <div style={{ position:'absolute', inset:0, background:'rgba(203,213,225,0.7)', clipPath:'polygon(calc(100% - 1.5px) 0,100% 0,0 calc(100% - 1.5px),0 100%)', pointerEvents:'none' }} />
+
+                {/* Day number */}
+                <span style={{ color: dayNumColor }} className="absolute top-0.5 left-1 z-10 text-[10px] md:text-[11px] font-bold leading-none pointer-events-none">
+                  {day}
+                </span>
+
+                {/* Departure pill — centred in top-left triangle */}
+                {outBkg && (
+                  <span
+                    className={`${SOURCE_PILL[outBkg.source] || 'bg-slate-500 text-white'} absolute z-10 rounded px-1 leading-tight font-semibold truncate pointer-events-none text-[8px] md:text-[9px]`}
+                    style={{ top:'30%', left:'5%', maxWidth:'46%' }}
+                  >
+                    {outBkg.name.split(' ')[0]}
+                  </span>
+                )}
+
+                {/* Arrival pill — centred in bottom-right triangle */}
+                {inBkg && (
+                  <span
+                    className={`${SOURCE_PILL[inBkg.source] || 'bg-slate-500 text-white'} absolute z-10 rounded px-1 leading-tight font-semibold truncate pointer-events-none text-[8px] md:text-[9px]`}
+                    style={{ bottom:'22%', right:'5%', maxWidth:'46%' }}
+                  >
+                    {inBkg.name.split(' ')[0]}
+                  </span>
+                )}
+              </div>
+            );
+          }
+
+          /* ── Normal cell (mid-stay or empty) ── */
+          const hasBkg = !!midBkg;
+          const primary = midBkg?.source;
 
           let cls = 'relative aspect-square rounded-lg p-1 md:p-1.5 flex flex-col gap-0.5 surface border border-app text-[11px] md:text-xs overflow-hidden transition-all';
           if (isToday) {
@@ -221,19 +306,13 @@ export default function Calendar({ bookings, onRefresh }) {
             <div
               key={dateStr}
               className={cls}
-              onClick={() => hasBkg && setSelected(dayBkgs[0])}
+              onClick={() => hasBkg && setSelected(midBkg)}
             >
               <span className={`${isToday ? 'text-primary-500' : 'text-app-2'} font-semibold`}>{day}</span>
-              {dayBkgs.slice(0, 2).map(b => (
-                <span
-                  key={b.id}
-                  className={`${SOURCE_PILL[b.source] || 'bg-slate-500 text-white'} rounded px-1 py-0 text-[9px] md:text-[10px] truncate font-semibold leading-tight`}
-                >
-                  {b.name.split(' ')[0]}
+              {hasBkg && (
+                <span className={`${SOURCE_PILL[primary] || 'bg-slate-500 text-white'} rounded px-1 py-0 text-[9px] md:text-[10px] truncate font-semibold leading-tight`}>
+                  {midBkg.name.split(' ')[0]}
                 </span>
-              ))}
-              {dayBkgs.length > 2 && (
-                <span className="text-[9px] text-app-3 font-semibold">+{dayBkgs.length - 2}</span>
               )}
             </div>
           );
