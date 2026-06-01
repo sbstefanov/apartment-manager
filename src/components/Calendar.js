@@ -33,13 +33,6 @@ const SOURCE_LIGHT = {
   'Друго':       { bg: '#F1F5F9', text: '#475569' },
 };
 
-function getBookingsForDay(bookings, dateStr) {
-  return bookings.filter(b => b.status !== 'cancelled' && dateStr >= b.checkin && dateStr < b.checkout);
-}
-
-function getCheckoutsForDay(bookings, dateStr) {
-  return bookings.filter(b => b.status !== 'cancelled' && b.checkout === dateStr);
-}
 
 function calcOccupancy(bookings, year, month, daysInMonth) {
   const monthStart = `${year}-${String(month + 1).padStart(2, '0')}-01`;
